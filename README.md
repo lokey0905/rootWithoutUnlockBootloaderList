@@ -9,10 +9,10 @@
 # Xiaomi/Redmi/POCO
 ## 受影響裝置列表
 
-| codename | 手機型號名稱 | 平台 | Android 版本 | 安全性修補日期 | 漏洞名稱 / CVE | 狀態 |
-| --- | --- | --- | --- | --- | --- | --- |
+| codename | 手機型號名稱 | 平台 | Android 版本 | 安全性修補日期 | 漏洞名稱 / CVE | 狀態 | 備註 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | cupid     | Xiaomi 12         | Snapdragon 8 Gen 1    | Android 12 | N/A | CVE-2025-21479 | 未測試 |
-| zeus      | Xiaomi 12 Pro     | Snapdragon 8 Gen 1    | Android 12 | N/A | CVE-2025-21479 | 未測試 |
+| zeus      | Xiaomi 12 Pro     | Snapdragon 8 Gen 1    | Android 12 | N/A | CVE-2025-21479 | 未測試 | 
 | mayfly    | Xiaomi 12S        | Snapdragon 8+ Gen 1   | Android 12 | N/A | CVE-2025-21479 | 未測試 |
 | unicorn   | Xiaomi 12S Pro    | Snapdragon 8+ Gen 1   | Android 12 | N/A | CVE-2025-21479 | 未測試 |
 | thor      | Xiaomi 12S Ultra  | Snapdragon 8+ Gen 1   | Android 12 | N/A | CVE-2025-21479 | 未測試 |
@@ -25,27 +25,32 @@
 | dada      | Xiaomi 15         | Snapdragon 8 Elite    | Android 15 | N/A | ABL Cmdline Injection | 未測試 |
 | haotian   | Xiaomi 15 Pro     | Snapdragon 8 Elite    | Android 15 | N/A | ABL Cmdline Injection | 未測試 |
 | xuanyuan  | Xiaomi 15 Ultra   | Snapdragon 8 Elite    | Android 15 | N/A | ABL Cmdline Injection | 未測試 |
-| pudding   | Xiaomi 17         | Snapdragon 8 Elite Gen 5 | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
-| pandora   | Xiaomi 17 Pro     | Snapdragon 8 Elite Gen 5 | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
-| popsicle  | Xiaomi 17 Pro Max | Snapdragon 8 Elite Gen 5 | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
-| nezha     | Xiaomi 17 Ultra   | Snapdragon 8 Elite Gen 5 | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
+| pudding   | Xiaomi 17         | Snapdragon 8 Elite Gen 5  | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
+| pandora   | Xiaomi 17 Pro     | Snapdragon 8 Elite Gen 5  | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
+| popsicle  | Xiaomi 17 Pro Max | Snapdragon 8 Elite Gen 5  | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
+| nezha     | Xiaomi 17 Ultra   | Snapdragon 8 Elite Gen 5  | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
+| liuqin    | Xiaomi Pad 6 Pro              | Snapdragon 8+ Gen 1   | Android 13 | N/A | CVE-2025-21479 | 未測試 |
+| yudi      | Xiaomi Pad 6 Max 14           | Snapdragon 8+ Gen 1   | Android 13 | N/A | CVE-2025-21479 | 未測試 |
+| sheng     | Xiaomi Pad 6S Pro 12.4        | Snapdragon 8 Gen 2    | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
+| uke       | Xiaomi Pad 7 / POCO Pad X1    | Snapdragon 7+ Gen 3   | Android 16 | N/A | CVE-2025-21479 | 未測試 | 
+| muyu      | Xiaomi Pad 7 Pro              | Snapdragon 8s Gen 3   | Android 16 | N/A | ABL Cmdline Injection | 未測試 | 
+| yupei     | Xiaomi Pad 8                  | Snapdragon 8s Gen 4   | Android 16 | N/A | ABL Cmdline Injection | 未測試 | 
+| piano     | Xiaomi Pad 8 Pro              | Snapdragon 8 Elite    | Android 16 | N/A | ABL Cmdline Injection | 未測試 | 
+| ruyi      | Xiaomi MIX Flip               | Snapdragon 8 Gen 3    | Android 14 | N/A | ABL Cmdline Injection | 未測試 |
+| bixi      | Xiaomi MIX Flip 2             | Snapdragon 8 Elite    | Android 15 | N/A | ABL Cmdline Injection | 未測試 |
+| babylon   | Xiaomi MIX Fold 3             | Snapdragon 8 Gen 2    | Android 13 | N/A | ABL Cmdline Injection | 未測試 |
+| goku      | Xiaomi MIX Fold 4             | Snapdragon 8 Gen 3    | Android 14 | N/A | ABL Cmdline Injection | 未測試 |
 | marble    | Redmi Note 12 Turbo / POCO F5     | Snapdragon 7+ Gen 2   | Android 13 | N/A | CVE-2025-21479 | 未測試 |
 | ingres    | Redmi K50 Gaming / POCO F4 GT     | Snapdragon 8 Gen 1    | Android 12 | N/A | CVE-2025-21479 | 未測試 |
 | diting    | Redmi K50 Ultra / Xiaomi 12T Pro  | Snapdragon 8+ Gen 1   | Android 12 | N/A | CVE-2025-21479 | 未測試 |
 | mondrian  | Redmi K60 / POCO F5 Pro           | Snapdragon 8+ Gen 1   | Android 13 | N/A | CVE-2025-21479 | 未測試 |
-| socrates  | Redmi K60 Pro                     | Snapdragon 8 Gen 2    | Android 13 | N/A | CVE-2025-21479 | 未測試 |
-| vermeer   | Redmi K70 / POCO F6 Pro           | Snapdragon 8 Gen 2    | Android 14 | N/A | CVE-2025-21479 | 未測試 |
-| manet     | Redmi K70 Pro                     | Snapdragon 8 Gen 3    | Android 14 | N/A | CVE-2025-21479 | 未測試 |
-| zorn      | Redmi K80 / POCO F7 Pro           | Snapdragon 8 Gen 3    | Android 15 | N/A | CVE-2025-21479 | 未測試 |
+| socrates  | Redmi K60 Pro                     | Snapdragon 8 Gen 2    | Android 13 | N/A | ABL Cmdline Injection | 未測試 |
+| vermeer   | Redmi K70 / POCO F6 Pro           | Snapdragon 8 Gen 2    | Android 14 | N/A | ABL Cmdline Injection | 未測試 |
+| manet     | Redmi K70 Pro                     | Snapdragon 8 Gen 3    | Android 14 | N/A | ABL Cmdline Injection | 未測試 |
+| zorn      | Redmi K80 / POCO F7 Pro           | Snapdragon 8 Gen 3    | Android 15 | N/A | ABL Cmdline Injection | 未測試 |
 | miro      | Redmi K80 Pro / POCO F7 Ultra     | Snapdragon 8 Elite    | Android 15 | N/A | ABL Cmdline Injection | 未測試 |
 | annibale  | Redmi K90 / POCO F8 Pro           | Snapdragon 8 Elite Gen 5 | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
 | myron     | Redmi K90 Pro Max / POCO F8 Ultra | Snapdragon 8 Elite Gen 5 | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
-| liuqin    | Xiaomi Pad 6 Pro           | Snapdragon 8+ Gen 1 | Android 13    | N/A | ABL Cmdline Injection | 未測試 |
-| yudi      | Xiaomi Pad 6 Max 14        | Snapdragon 8+ Gen 1 | Android 13    | N/A | ABL Cmdline Injection | 未測試 |
-| ruyi      | Xiaomi MIX Flip            | Snapdragon 8 Gen 3  | Android 14    | N/A | ABL Cmdline Injection | 未測試 |
-| bixi      | Xiaomi MIX Flip 2          | Snapdragon 8 Elite  | Android 15    | N/A | ABL Cmdline Injection | 未測試 |
-| babylon   | Xiaomi MIX Fold 3          | Snapdragon 8 Gen 2  | Android 13    | N/A | ABL Cmdline Injection | 未測試 |
-| goku      | Xiaomi MIX Fold 4          | Snapdragon 8 Gen 3  | Android 14    | N/A | ABL Cmdline Injection | 未測試 |
 
 ## 漏洞利用說明
 ### 1. CVE-2025-21479（Qualcomm Adreno GPU micronode 記憶體破壞）
@@ -68,3 +73,4 @@ Qualcomm 對應修補提交也直接將問題描述為：
 > - `ABL Cmdline Injection` 為整理用途的技術性名稱，用來統稱 fastboot OEM / ABL 參數驗證不完整、可導致 kernel cmdline 注入的漏洞鏈。
 
 # OnePlus
+待完成
