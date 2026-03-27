@@ -40,7 +40,7 @@
 | bixi      | Xiaomi MIX Flip 2             | Snapdragon 8 Elite    | Android 15 | N/A | ABL Cmdline Injection | 未測試 |
 | babylon   | Xiaomi MIX Fold 3             | Snapdragon 8 Gen 2    | Android 13 | N/A | ABL Cmdline Injection | 未測試 |
 | goku      | Xiaomi MIX Fold 4             | Snapdragon 8 Gen 3    | Android 14 | N/A | ABL Cmdline Injection | 未測試 |
-| marble    | Redmi Note 12 Turbo / POCO F5     | Snapdragon 7+ Gen 2   | Android 13 | N/A | CVE-2025-21479 | 未測試 |
+| marble    | Redmi Note 12 Turbo / POCO F5     | Snapdragon 7+ Gen 2   | Android 13 | N/A | CVE-2025-21479 | 已測試 |
 | ingres    | Redmi K50 Gaming / POCO F4 GT     | Snapdragon 8 Gen 1    | Android 12 | N/A | CVE-2025-21479 | 未測試 |
 | diting    | Redmi K50 Ultra / Xiaomi 12T Pro  | Snapdragon 8+ Gen 1   | Android 12 | N/A | CVE-2025-21479 | 未測試 |
 | mondrian  | Redmi K60 / POCO F5 Pro           | Snapdragon 8+ Gen 1   | Android 13 | N/A | CVE-2025-21479 | 未測試 |
@@ -49,7 +49,7 @@
 | manet     | Redmi K70 Pro                     | Snapdragon 8 Gen 3    | Android 14 | N/A | ABL Cmdline Injection | 未測試 |
 | zorn      | Redmi K80 / POCO F7 Pro           | Snapdragon 8 Gen 3    | Android 15 | N/A | ABL Cmdline Injection | 未測試 |
 | miro      | Redmi K80 Pro / POCO F7 Ultra     | Snapdragon 8 Elite    | Android 15 | N/A | ABL Cmdline Injection | 未測試 |
-| annibale  | Redmi K90 / POCO F8 Pro           | Snapdragon 8 Elite Gen 5 | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
+| annibale  | Redmi K90 / POCO F8 Pro           | Snapdragon 8 Elite    | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
 | myron     | Redmi K90 Pro Max / POCO F8 Ultra | Snapdragon 8 Elite Gen 5 | Android 16 | N/A | ABL Cmdline Injection | 未測試 |
 
 ## 漏洞利用說明
@@ -59,6 +59,13 @@
 - https://github.com/zhuowei/cheese
 
 若漏洞可被成功鏈接到系統提權路徑，可能進一步取得臨時 Root 權限，但實際影響仍會受到 SoC、GPU 世代、韌體版本與修補狀態影響。
+
+社群實測回報（其他機型待驗證）：
+
+- 來源：Coolapk 使用者「@羊了个羊了个羊了个羊」
+- 連結：https://www.coolapk.com/feed/70655251?s=NTFjZmEwYzkyN2NkOGUyZzY5YzYxOTM4ega1601
+- 重點：貼文內容描述在 Redmi Note 12 Turbo（標籤含 #红米Note12Turbo）結合 `https://github.com/zhuowei/cheese` 進行測試，回報可達到臨時 Root 相關效果。
+- 註記：此為社群單點回報，建議以「可行跡象」歸檔，後續仍需多機型與多版本交叉驗證。
 
 ### 2. ABL Cmdline Injection（fastboot OEM / ABL 命令列注入漏洞鏈）
 此類漏洞鏈的核心在於 Qualcomm ABL（Android Bootloader）對 `fastboot oem` 某些參數的驗證不完整，導致不受信任的輸入被帶入 kernel cmdline。公開討論中，研究者展示了可藉由 OEM 指令額外注入如 `androidboot.selinux=permissive` 之類的啟動參數，進而削弱開機後的強制安全限制。
