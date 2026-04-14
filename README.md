@@ -40,8 +40,8 @@
 | bixi      | Xiaomi MIX Flip 2             | Snapdragon 8 Elite    | Android 15 | N/A | ABL Cmdline Injection | 未測試 |
 | babylon   | Xiaomi MIX Fold 3             | Snapdragon 8 Gen 2    | Android 13 | N/A | ABL Cmdline Injection | 未測試 |
 | goku      | Xiaomi MIX Fold 4             | Snapdragon 8 Gen 3    | Android 14 | N/A | ABL Cmdline Injection | 未測試 |
-| marble    | Redmi Note 12 Turbo / POCO F5     | Snapdragon 7+ Gen 2   | Android 13 | N/A | CVE-2025-21479 | 已測試 |
-| ingres    | Redmi K50 Gaming / POCO F4 GT     | Snapdragon 8 Gen 1    | Android 12 | N/A | CVE-2025-21479 | 未測試 |
+| marble    | Redmi Note 12 Turbo / POCO F5     | Snapdragon 7+ Gen 2   | Android 13 | 2026-01-01 | CVE-2025-21479 | 已測試 |
+| ingres    | Redmi K50 Gaming / POCO F4 GT     | Snapdragon 8 Gen 1    | Android 12 | 2025-04-01 | CVE-2025-21479 | 已測試未成功 |
 | diting    | Redmi K50 Ultra / Xiaomi 12T Pro  | Snapdragon 8+ Gen 1   | Android 12 | N/A | CVE-2025-21479 | 未測試 |
 | mondrian  | Redmi K60 / POCO F5 Pro           | Snapdragon 8+ Gen 1   | Android 13 | N/A | CVE-2025-21479 | 未測試 |
 | socrates  | Redmi K60 Pro                     | Snapdragon 8 Gen 2    | Android 13 | N/A | ABL Cmdline Injection | 未測試 |
@@ -99,6 +99,7 @@ fastboot oem set-hw-fence-value 0 androidboot.selinux=permissive
 
 - `set-gpu-preemption` 這一路徑可用於關閉 SELinux 強制執行，屬於 **Qualcomm 限定**，目前已存在修補提交。
 - `set-hw-fence-value` 為另一個相似變體，亦已修補；公開討論中指出此類問題屬於較早期引入的老漏洞，理論上可能適用於更多 Qualcomm SoC。
+- 版本分佈觀察（社群回報）：目前較多可利用回報集中在 **HyperOS 2 / HyperOS 3**；其他版本仍需更多樣本與獨立驗證。
 
 此外，在 **Xiaomi 裝置** 上，公開討論中亦提到可配合使用下列系統服務呼叫：
 
@@ -143,4 +144,7 @@ service call miui.mqsas.IMQSNative 21 i32 1 s16 "命令" i32 1 s16 "参数列表
 
 
 # OnePlus
-待完成
+[待完成](https://github.com/superturtlee/gbl_root_canoe)
+
+# MTK
+解鎖後會關閉secure boot，詳細待研究
