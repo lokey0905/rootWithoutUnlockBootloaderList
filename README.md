@@ -143,8 +143,11 @@ service call miui.mqsas.IMQSNative 21 i32 1 s16 "命令" i32 1 s16 "参数列表
 > - `ABL Cmdline Injection` 為整理用途的技術性名稱，用來統稱 fastboot OEM / ABL 參數驗證不完整、可導致 kernel cmdline 注入的漏洞鏈。
 
 
-# OnePlus
-[待完成](https://github.com/superturtlee/gbl_root_canoe)
+# Snapdragon 8 Elite Gen 5/Snapdragon 8 Gen 5
 
-# MTK
+https://github.com/superturtlee/gbl_root_canoe
+
+# MTK(OPPO/Realme/OnePlus)
 解鎖後會關閉secure boot，詳細待研究
+
+https://github.com/Shocked-Cat/oppo-mtk-fastboot-unlock
