@@ -15,6 +15,9 @@
 
 若漏洞可被成功鏈接到系統提權路徑，可能進一步取得臨時 Root 權限，但實際影響仍會受到 SoC、GPU 世代、韌體版本與修補狀態影響。
 
+在本報告的攻擊鏈整理中，CVE-2025-21479 與後述 ABL Cmdline Injection 的共同點，是它們都可能被用作**削弱 SELinux enforcing 限制**或使系統進入 **SELinux permissive** 狀態的前置入口。  
+一旦 SELinux 強制存取控制失效，後續就可能接上其他本機提權技巧，例如 Xiaomi `IMQSNative` / `MQSAS` 服務呼叫，或 Magica 所代表的 isolated service / isolated process 類提權路徑。
+
 社群實測回報（其他機型待驗證）：
 
 - 來源：Coolapk 使用者「@羊了个羊了个羊了个羊」
@@ -64,9 +67,14 @@ service call miui.mqsas.IMQSNative 21 i32 1 s16 "命令" i32 1 s16 "参数列表
 
 其重點在於：若可成功呼叫對應服務介面，可能以 **root 權限執行任意命令**。
 
-不過，這裡的順序很重要：必須先透過 Qualcomm ABL cmdline injection 將系統切至 `SELinux permissive`，之後才有機會配合 Xiaomi `IMQSNative` / `MQSAS` 相關問題形成後續提權鏈。
+不過，這裡的順序很重要：必須先透過 CVE-2025-21479、Qualcomm ABL cmdline injection，或其他方式使 SELinux enforcing 失效 / 進入 `SELinux permissive`，之後才有機會配合後續本機提權技巧形成完整鏈。
 
-此類利用鏈大致可整理為：
+目前公開討論中較常被提到的後續路徑包含兩類：
+
+1. **Xiaomi `IMQSNative` / `MQSAS` 服務路徑**：在 SELinux permissive 後，若可呼叫對應系統服務介面，可能以 root 權限執行命令。
+2. **Magica / isolated service 路徑**：Magica README 將其描述為 Android 10+ 在 seccomp disabled 情境下的 privilege escalation PoC；公開討論亦提到，SELinux permissive 後可利用 isolated service / isolated process 類技巧進一步提權。
+
+以 Xiaomi `IMQSNative` / `MQSAS` 為例，利用鏈大致可整理為：
 
 1. 先透過 ABL 類漏洞注入 `androidboot.selinux=permissive`
 2. 使系統以 **SELinux permissive** 狀態啟動
@@ -75,8 +83,8 @@ service call miui.mqsas.IMQSNative 21 i32 1 s16 "命令" i32 1 s16 "参数列表
 
 在此情況下，可形成 **完整 root 權限取得**。
 
-另外，公開討論中也提到：
-對於已經處於 **SELinux permissive** 的系統，即使不是 Xiaomi 裝置，也可能存在其他提權方式，例如利用 isolated service / isolated process 相關技巧進一步提權。
+若採用 Magica / isolated service 類路徑，則重點不在於特定 Xiaomi 服務，而是在 **SELinux permissive** 或其他安全限制被削弱後，利用 isolated service / isolated process 執行環境與系統服務邊界形成後續提權。  
+因此，1.1 與 1.2 可視為「讓 SELinux 限制失效」的前置入口；`IMQSNative` 與 Magica 則是 permissive 之後可能銜接的不同提權分支。
 
 參考資料：
 
