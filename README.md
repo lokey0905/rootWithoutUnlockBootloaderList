@@ -476,28 +476,36 @@ flowchart TD
 | bixi      | Xiaomi MIX Flip 2             | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
 | babylon   | Xiaomi MIX Fold 3             | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
 | goku      | Xiaomi MIX Fold 4             | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| marble    | Redmi Note 12 Turbo / POCO F5     | Snapdragon 7+ Gen 2   | Android 15 | 2026-02-01 | CVE-2025-21479 | 已測試 | |
+| marble    | Redmi Note 12 Turbo / POCO F5     | Snapdragon 7+ Gen 2   | Android 15 | 2026-05-01 | CVE-2025-21479 | 已測試 | |
 | sapphiren | Redmi Note 13 NFC                 | Snapdragon 685        | Android 15 | 2026-01-01 | ABL Cmdline Injection | 已測試 | |
 | creek     | Redmi 15 / POCO M7 Pro            | Snapdragon 685        | Android 15 | 2026-01-01 | ABL Cmdline Injection | 已測試 | |
+| kunzite   | Redmi Note 15 5G                  | Snapdragon 6 Gen 3    | Android 15 | 2026-02-01 | ABL Cmdline Injection | 已測試 | 黑屏無畫面 |
 | ingres    | Redmi K50 Gaming / POCO F4 GT     | Snapdragon 8 Gen 1    | Android 14 | 2025-04-01 | CVE-2025-21479 | 已測試未成功 | |
 | diting    | Redmi K50 Ultra / Xiaomi 12T Pro  | Snapdragon 8+ Gen 1   | N/A | N/A | CVE-2025-21479 | 未測試 | |
 | mondrian  | Redmi K60 / POCO F5 Pro           | Snapdragon 8+ Gen 1   | Android 15 | 2026-02-01 | CVE-2025-21479 | 已測試 | |
 | socrates  | Redmi K60 Pro                     | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
 | vermeer   | Redmi K70 / POCO F6 Pro           | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
 | manet     | Redmi K70 Pro                     | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
+| onyx      | Redmi Turbo 4 Pro / POCO F7       | Snapdragon 8s Gen 4   | N/A | N/A | ABL Cmdline Injection | 已測試 | 黑屏無畫面 |
 | zorn      | Redmi K80 / POCO F7 Pro           | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
 | miro      | Redmi K80 Pro / POCO F7 Ultra     | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
 | annibale  | Redmi K90 / POCO F8 Pro           | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
 | myron     | Redmi K90 Pro Max / POCO F8 Ultra | Snapdragon 8 Elite Gen 5 | N/A | N/A | ABL Cmdline Injection | 未測試 | |
 
 ### 3.2 Nothing / CMF
+參考來源：
+- <https://github.com/R0rt1z2/fenrir#status>
 
 | codename | 裝置 | 狀態 | 備註 |
 | --- | --- | --- | --- |
-| Tetris    | CMF Phone 1             | 支援不完整 |
-| Pacman    | Nothing Phone (2a)      | 已支援 |
-| PacmanPro | Nothing Phone (2a) Plus | 已支援 |
-| N/A       | Vivo X80 Pro            | 可能受影響 | 尚未利用 |
+| `Tetris`    | CMF Phone 1             | 已支援 | 支援不完整 |
+| `Pacman`    | Nothing Phone (2a)      | 已支援 |
+| `PacmanPro` | Nothing Phone (2a) Plus | 已支援 |
+| `LG7n`      | Tecno Pova 4            | 已支援 | 尚未有可利用檔案 |
+| `LG8n`      | Tecno Pova 4 Pro        | 已支援 | 尚未有可利用檔案 |
+| `LH7n`      | Tecno Pova 5            | 已支援 | 尚未有可利用檔案 |
+| `Q25`       | Zinwa Q25               | 已支援 | 尚未有可利用檔案 |
+| N/A         | Vivo X80 Pro            | 可能受影響 | 尚未利用 |
 
 ### 3.3 OPPO / Realme / OnePlus
 
