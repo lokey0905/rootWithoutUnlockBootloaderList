@@ -15,8 +15,8 @@
 
 若漏洞可被成功鏈接到系統提權路徑，可能進一步取得臨時 Root 權限，但實際影響仍會受到 SoC、GPU 世代、韌體版本與修補狀態影響。
 
-在本報告的攻擊鏈整理中，CVE-2025-21479 與後述 ABL Cmdline Injection 的共同點，是它們都可能被用作**削弱 SELinux enforcing 限制**或使系統進入 **SELinux permissive** 狀態的前置入口。  
-一旦 SELinux 強制存取控制失效，後續就可能接上其他本機提權技巧，例如 Xiaomi `IMQSNative` / `MQSAS` 服務呼叫，或 Magica 所代表的 isolated service / isolated process 類提權路徑。
+CVE-2025-21479 的直接漏洞原語是 Qualcomm Adreno GPU 路徑中的未授權命令執行與記憶體破壞；若利用鏈成功取得 kernel / root 控制，攻擊者才可能在後續階段嘗試修改 SELinux 狀態。換言之，**SELinux permissive 是成功利用後可能達成的效果，不是此 CVE 本身直接提供的功能**。
+這點與後述 ABL Cmdline Injection 不同：ABL 類問題是透過啟動參數注入，直接使系統以 `androidboot.selinux=permissive` 啟動。無論走哪一條路徑，取得 permissive 都不等於自動取得 root；後續仍可能需要 Xiaomi `IMQSNative` / `MQSAS`、Magica 所代表的 isolated service / isolated process 路徑，或其他高權限媒介。
 
 社群實測回報（其他機型待驗證）：
 
@@ -122,7 +122,7 @@ service call miui.mqsas.IMQSNative 21 i32 1 s16 "命令" i32 1 s16 "参数列表
 - 部分公開說明提到 `lockmode` / `unlockmode` 設計，顯示此類工具可能具備讓裝置在特定情境下呈現類似「假上鎖」狀態的能力。
 - 此類漏洞鏈與傳統 Android userspace 提權不同，風險層級更接近 **bootloader / secure boot chain bypass**。
 
-目前公開資料中提到的可能受影響平台，整理於 3.4「待驗證裝置」。
+目前公開資料中提到的可能受影響平台，整理於 3.5「Snapdragon 8 Elite Gen 5 / Snapdragon 8 Gen 5 GBL 候選裝置」。
 
 > 註：  
 > 此處的「可能受影響」應理解為公開專案或社群研究中提到的觀察範圍，不代表每一台裝置、每一個韌體版本都已確認可利用。
@@ -150,29 +150,52 @@ service call miui.mqsas.IMQSNative 21 i32 1 s16 "命令" i32 1 s16 "参数列表
 > - MTK 裝置的可利用性高度依賴廠商實作。即使同為 MTK SoC，不同品牌、不同 preloader、不同 DA / auth 策略，結果也可能完全不同。
 > - 已知 OPPO / Realme / OnePlus 的部分 MTK 裝置已在安全補丁 2025 年 Android 13 以上設備加密 DA，加密後僅可使用售後授權工具或是降級系統版本方式利用此類漏洞鏈。
 
+完整上游測試狀態整理於 3.4「oppo-mtk-fastboot-unlock 上游測試清單」。
+
 ---
 
-### 1.5 漏洞 5：MediaTek Secure Boot Chain bypass（fenrir）
+### 1.5 漏洞 5：MediaTek 啟動鏈控制與 Fake Lock（fenrir / kaeru）
+
+`fenrir` 與 `kaeru` 都在 Android userspace 啟動前介入 MediaTek boot chain，並可在受支援裝置上提供 lock-state spoofing / fake lock 功能，使實際已解鎖或載入修改內容的裝置對後續元件呈現 `locked` 狀態。不過兩者的角色並不相同：`fenrir` 直接利用 secure boot chain 的邏輯缺陷；`kaeru` 則是注入修改後 LK 的 bootloader payload，其部署通常仍需要可寫入修改 LK 的前置條件。
+
+#### 1.5.1 fenrir：Secure Boot Chain Bypass 與 Lock-State Spoofing
 
 參考專案：
 
 - <https://github.com/R0rt1z2/fenrir>
 
-`fenrir` 是針對 MediaTek secure boot chain 的公開 PoC。  
-專案最初以 **Nothing Phone (2a)** / **CMF Phone 1** 為主要目標，目前上游 README 已將支援範圍擴展至 Nothing、CMF、Lenovo、Tecno、Zinwa、Redmi 與 POCO 的多款 MediaTek 裝置。
+`fenrir` 是針對 MediaTek secure boot chain 邏輯缺陷的公開 PoC。當 `seccfg` 為 unlocked 狀態時，部分受影響 Preloader 未正確驗證 `bl2_ext`；而 `bl2_ext` 仍以 EL3 執行並負責驗證後續映像，因此修改後的 `bl2_ext` 可破壞後續 chain of trust。
 
 公開說明中的重點包含：
 
-- 漏洞位於 **MediaTek secure boot chain**。
-- 問題核心是特定條件下，有元件未被正確驗證。
-- 該 PoC 可在 Preloader 之後破壞 secure boot chain。
-- README 提到可達成 **EL3 code execution**。
-- README 亦提到 PoC 中包含 spoof lock state 的能力，用於在裝置實際處於非標準狀態時呈現 locked 狀態。
-- 上游目前列出 12 個受支援的裝置代號；但「列為支援」不代表每個區域版本、OTA 或韌體建置均已完成獨立實機驗證。
-- 官方 Releases 頁面目前可見的預先建置資產集中於 `Pacman` 與 `PacmanPro`；其他裝置仍可能需要依對應韌體自行建置或適配。
-- Vivo X80 Pro 被作者列為已知受影響，但尚未列入目前正式支援清單。
+- 漏洞位於 **MediaTek secure boot chain**，可在 Preloader 執行後取得 **EL3 code execution**。
+- PoC 會修改驗證策略，使未簽章或已修改的後續啟動映像可被載入。
+- PoC 亦包含 lock-state spoofing，使實際 unlocked 的裝置向後續元件呈現 `locked` 狀態。
+- 專案最初以 **Nothing Phone (2a)** / **CMF Phone 1** 為主要目標，之後擴展至多款 Nothing、CMF、Lenovo、Tecno、Zinwa、Redmi、POCO 與 Xiaomi 裝置。
+- `fenrir` 上游已於 2026 年 9 月封存並標示為 deprecated；現有原始碼與裝置適配仍可供研究，但不應預期上游持續維護。
+- Vivo X80 Pro 被作者列為已知受影響，但尚未列入正式支援清單。
 
 完整支援狀態與裝置清單整理於 3.2「fenrir 支援與已知受影響裝置」。
+
+#### 1.5.2 kaeru：LK Payload 與 Lock-State Spoofing
+
+參考專案：
+
+- <https://github.com/R0rt1z2/kaeru>
+
+`kaeru` 是針對 ARMv7 MediaTek Little Kernel（LK）的 bootloader payload / patch framework。它會將自訂 payload 注入指定版本的 LK 映像，使其在 Android kernel 啟動前執行，並可依裝置適配加入自訂 fastboot 指令、修改開機模式、移除解鎖警告及執行其他 bootloader 階段操作。
+
+在具有對應實作的裝置上，`kaeru` 可透過 lock-state spoofing 將實際 unlocked 的裝置呈現為 `locked`；公開 Release 將此能力稱為 `Lock state spoofing`，並提供 `fastboot oem bldr_spoof` 作為控制介面。
+
+需要注意：
+
+- `kaeru` 本身不是單一、可直接寫入所有裝置的 boot-chain exploit；修改後的 LK 仍須透過已解鎖寫入路徑、cert bypass、Preloader / BootROM 漏洞或其他裝置特定方式刷入。
+- LK 中的函式位址、資料結構與 patch offset 會隨裝置及 bootloader 版本改變，因此支援狀態必須逐裝置、逐韌體確認。
+- 並非所有 `kaeru` 支援裝置都具備 lock-state spoofing；應同時核對對應 `defconfig` 與 board 實作，不能只依照 Release 映像或單一設定旗標判定。
+
+`kaeru` 目前原始碼中具備 fake-lock 實作的目標，整理於 3.3「`kaeru` Fake Lock 原始碼支援清單」。
+
+> 註：fake lock 只代表裝置對部分本機或遠端驗證路徑呈現 `locked` 狀態，不代表原始 secure boot chain 已恢復，也不保證所有 AVB、Key Attestation 或 Play Integrity 驗證都會接受該狀態。
 
 ---
 
@@ -362,16 +385,22 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["遠端服務產生一次性 challenge"] --> B["App 向硬體 Keystore / KeyMint 請求 attestation"]
-    R["RKP 預先供應 attestation key 與憑證鏈"] --> B
-    B --> C["TEE 產生綁定 challenge 的簽章與憑證鏈"]
+    A["遠端服務產生一次性 challenge"] --> B["App 發起 attestation 請求"]
+    R["RKP 預先向安全硬體供應 attestation key 與憑證鏈"] --> K["硬體 Keystore / KeyMint"]
+    B --> K
+    K --> C["TEE 產生綁定 challenge 的簽章與憑證鏈"]
     C --> D["App 將 attestation statement 傳回遠端服務"]
-    D --> E["攻擊者嘗試轉送、重放或替換回應"]
-    E --> F{"伺服器是否完整驗證"}
-    F -->|"是"| G["驗證簽章、可信根、撤銷狀態、challenge、時效與身分綁定"]
-    G --> H["不符合條件的回應被拒絕"]
-    F -->|"否"| I["過期、外部裝置或僅由用戶端宣告的結果可能被接受"]
-    I --> J["遠端服務對裝置可信狀態產生誤判"]
+    D --> E{"傳輸或處理流程是否遭介入"}
+    E -->|"否"| F["遠端服務收到原始 statement"]
+    E -->|"是"| G["攻擊者嘗試轉送、重放或替換回應"]
+    G --> H["遠端服務收到可疑或外部來源 statement"]
+    F --> I{"伺服器是否完整驗證簽章、可信根、撤銷、challenge、時效與身分綁定"}
+    H --> I
+    I -->|"否"| J["過期、外部裝置或僅由用戶端宣告的結果可能被接受"]
+    J --> L["遠端服務對裝置可信狀態產生誤判"]
+    I -->|"是"| M{"statement 是否符合本次請求與信任政策"}
+    M -->|"是"| N["接受有效 attestation 並依結果判斷裝置狀態"]
+    M -->|"否"| O["拒絕不符合條件的回應"]
 ```
 
 #### 2.2.2 風險定位
@@ -441,10 +470,13 @@ flowchart TD
 - Belkasoft X Forensic：<https://belkasoft.com/x>
 - Oxygen Forensics Android Agent：<https://www.oxygenforensics.com/technical-resources/android-agent/>
 
-### 2.4 Qualcomm GBL 解鎖 Bootloader 漏洞鏈
+### 2.4 Qualcomm GBL / UEFI Boot Chain 操控與解鎖狀態風險
 
 近期熱門的 Qualcomm GBL 解鎖 Bootloader 研究，重點在於新一代 Android boot chain 中 **Qualcomm ABL / GBL / UEFI / efisp** 之間的載入與驗證邊界。  
 公開報導指出，部分 Android 16 / Qualcomm 平台上，Qualcomm ABL 會嘗試從 `efisp` 分區載入 GBL 相關 UEFI app；問題在於載入流程可能只確認該內容是否為 UEFI app，而沒有充分驗證其是否為可信、原廠預期的 GBL 元件。這使攻擊者在具備寫入 `efisp` 的前提下，可能讓自訂 UEFI app 於 bootloader 階段被執行。
+
+需要區分公開工具已證明的部署路徑與本報告延伸討論的攻擊假設：`gbl_root_canoe` 公開文件所描述的安裝流程，前提是裝置 **Bootloader 已解鎖且已取得 root**，再寫入對應元件以提供自訂 fastboot / boot-chain 行為與 fake lock。它本身不能直接作為「locked 裝置可由零開始解鎖」的證據。
+本報告另行討論的 locked-device 路徑屬於 post-root 風險推演：若攻擊者已透過其他漏洞取得 kernel control 或 `efisp` block-device 寫入 primitive，且能跨過 OEM 寫入保護、Anti-rollback 與持久化檢查，才可能利用同一載入邊界進一步影響 unlock state。此路徑必須逐裝置與韌體獨立驗證。
 
 這條鏈之所以重要，是因為利用點發生在 **Android 系統啟動前的 boot chain 階段**。  
 一旦可在該階段執行非預期程式碼，就可能影響 bootloader lock state、critical unlock state、fastboot 行為、Verified Boot 判斷或後續系統啟動狀態。
@@ -465,32 +497,36 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["確認裝置使用受影響的 Qualcomm ABL / GBL 載入路徑"] --> D{"載入缺口與寫入能力是否同時成立"}
-    B["利用 kernel、GPU、系統服務或其他前置漏洞"] --> C["取得 root、高權限服務或 efisp 寫入 primitive"]
-    P["僅有 SELinux permissive"] --> Q["仍需串接高權限媒介才能寫入分區"]
-    Q --> C
-    C --> D
-    D -->|"否"| E["攻擊鏈無法進入 bootloader 執行階段"]
-    D -->|"是"| F["將自訂 EFI payload 寫入 efisp"]
-    F --> G["重新啟動後由 ABL 載入 EFI payload"]
-    G --> H["在 GBL / bootloader 階段取得非預期程式碼執行"]
-    H --> I{"後續修改目標"}
-    I --> J["變更 unlock / critical unlock 或 fastboot 行為"]
-    I --> K["形成 fake locked 或 boot state 不一致狀態"]
-    J --> L["允許刷入或載入修改後映像"]
-    L --> M["進一步形成持久化 root 或自訂系統狀態"]
+    A{"ABL / GBL 是否存在可利用的 EFI 載入邊界"}
+    A -->|"否"| Z["不適用此漏洞鏈"]
+    A -->|"是"| B{"部署起始狀態"}
+    B -->|"上游文件所述路徑"| C["Bootloader 已解鎖且已取得 root"]
+    B -->|"locked-device 研究路徑"| D["先利用 kernel、GPU、系統服務或其他漏洞"]
+    D --> E{"是否取得 efisp 寫入 primitive 並跨過 OEM 寫入保護"}
+    E -->|"否"| F["只有 runtime root 或 SELinux permissive，無法安裝 EFI payload"]
+    E -->|"是"| G["屬於待逐機驗證的 post-root 延伸路徑"]
+    C --> H["寫入與目標韌體匹配的 EFI / BDS / ABL 元件"]
+    G --> H
+    H --> I["重新啟動後由 ABL 載入 EFI payload"]
+    I --> J["在 GBL / bootloader 階段執行自訂程式碼"]
+    J --> K{"後續目標"}
+    K --> L["在已解鎖環境提供自訂 fastboot 或 fake lock"]
+    K --> M["研究性修改 unlock / critical unlock 狀態"]
+    M --> N{"OEM、AVB、Anti-rollback 與持久化檢查是否通過"}
+    N -->|"否"| O["狀態不一致、無法啟動或修改無法持久化"]
+    N -->|"是"| P["允許載入修改映像或形成非標準 Bootloader 狀態"]
 ```
 
 #### 2.4.2 風險定位
 
 | 分類 | 內容 |
 | --- | --- |
-| 類型 | Qualcomm GBL / ABL Boot Chain Unlock |
+| 類型 | Qualcomm GBL / ABL Boot Chain Manipulation |
 | 攻擊位置 | Qualcomm ABL、GBL、UEFI app、`efisp` 分區、bootloader lock state |
-| 主要用途 | 繞過 OEM Bootloader 解鎖限制，改變裝置啟動與刷寫狀態 |
+| 主要用途 | 已解鎖環境中的 fake lock / 自訂 fastboot，以及具備額外寫入 primitive 時可能發生的 unlock-state 操控 |
 | 相關機制 | GBL、UEFI、efisp、ABL、fastboot OEM、SELinux permissive、Verified Boot / AVB |
-| 常見前提 | Android 16 / GBL 架構裝置、可寫入 `efisp` 的前置能力，或可搭配其他漏洞鏈取得必要權限 |
-| 風險重點 | 可在 Android userspace 之前影響 boot chain，進而造成 Bootloader 解鎖、假上鎖、Root 或完整性驗證誤判等後續風險 |
+| 常見前提 | 上游部署路徑要求已解鎖與 root；locked-device 推演另需可寫入 `efisp` 的前置能力及裝置特定驗證 |
+| 風險重點 | 可在 Android userspace 之前影響 boot chain；但 fake lock、初始解鎖與 post-root 狀態修改必須分開判定 |
 
 #### 2.4.3 目前觀察
 
@@ -678,28 +714,29 @@ flowchart TD
     X["或由 BROM、Preloader、DA、fastboot 或維修通道取得寫入 primitive"] --> B
     B -->|"否"| C["僅取得 runtime root，無法安裝修改後 LK"]
     B -->|"是"| D["取得與目標裝置及韌體完全匹配的 LK / boot-chain 映像"]
-    D --> E["建立裝置特定 LK patch"]
-    E --> F{"預期修改目標"}
-    F --> G["使 LK 直接採用 unlocked state"]
-    F --> H["恢復或開放標準 fastboot unlock handler"]
-    G --> I["對修改後 partition 套用相容的 cert2 bypass"]
-    H --> I
-    I --> J{"目標 Preloader 的憑證解析路徑是否受影響"}
-    J -->|"否或已修補"| K["憑證驗證失敗，修改映像不會被接受"]
-    J -->|"是"| L{"是否需要且能相容地串接 fenrir"}
-    L -->|"否"| M["使用通過 cert bypass 的修改後 LK"]
-    L -->|"是"| N["加入 bl2_ext / EL3 控制與 lock-state spoof 路徑"]
-    M --> O["透過既有寫入 primitive 覆寫匹配的 LK / boot-chain 分區"]
-    N --> O
-    O --> P{"啟動、Anti-rollback 與 OEM 客製檢查是否通過"}
-    P -->|"否"| Q["無法啟動或進入修復流程"]
-    P -->|"是"| R["LK 使用修改後的 unlock policy / fastboot 行為"]
-    R --> S{"OEM 是否另有持久化解鎖狀態"}
-    S -->|"否"| T["形成 unlocked state、標準解鎖路徑或裝置特定 fake locked 狀態"]
-    S -->|"是"| U{"seccfg、RPMB / secure storage 與 LK 判斷是否一致"}
-    U -->|"是"| V["形成與 OEM 檢查一致的 Bootloader 狀態"]
-    U -->|"否"| W["解鎖可能僅在 patched LK 下有效"]
-    W --> Y["刷回 stock LK 後可能重新判定為 locked、狀態不一致或無法正常啟動"]
+    D --> E{"選擇裝置相容路徑，可單獨使用或在各自條件成立時組合"}
+    E -->|"LK / lkpatcher 路徑"| F["建立裝置特定 LK patch：unlocked state 或標準 fastboot unlock handler"]
+    F --> G["對修改後 LK 套用相容的 cert2 bypass"]
+    G --> H{"目標 Preloader 的憑證解析路徑是否受影響"}
+    H -->|"否或已修補"| I["修改後 LK 不會被接受"]
+    H -->|"是"| J["取得可被目標 boot chain 接受的修改後 LK"]
+    E -->|"fenrir 路徑"| K["準備匹配裝置的 bl2_ext / EL3 payload"]
+    K --> L{"裝置是否存在 fenrir 邏輯缺陷且 payload 相容"}
+    L -->|"否"| M["fenrir 路徑不適用"]
+    L -->|"是"| N["取得 bl2_ext / EL3 控制或 lock-state spoof 能力"]
+    J --> O["透過既有寫入 primitive 覆寫對應 LK 分區"]
+    N --> P["透過既有寫入 primitive 安裝對應 fenrir 元件"]
+    O --> Q{"啟動、Anti-rollback 與 OEM 客製檢查是否通過"}
+    P --> Q
+    Q -->|"否"| R["無法正常啟動，可能進入修復流程"]
+    Q -->|"是"| S{"實際形成的裝置特定結果"}
+    S --> T["LK 採用 unlocked policy 或恢復標準 fastboot 解鎖路徑"]
+    S --> U["形成 fake lock / lock-state spoof 呈現"]
+    S --> V["取得 EL3 或後續 boot-chain 控制"]
+    T --> W{"seccfg、RPMB / secure storage 與 LK 判斷是否一致"}
+    W -->|"是"| Y["形成與 OEM 持久化檢查一致的 Bootloader 狀態"]
+    W -->|"否"| Z["解鎖可能僅在 patched LK 下有效；刷回 stock LK 後可能重新鎖定或狀態不一致"]
+    U --> AA["是否能通過 Key Attestation / Play Integrity 仍須另外驗證"]
 ```
 
 #### 2.6.4 風險定位
@@ -857,7 +894,8 @@ DARKNAVY 表示已檢查超過 30 台、來自 9 個廠商的 Android 裝置，�
 | goku      | Xiaomi MIX Fold 4             | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
 | marble    | Redmi Note 12 Turbo / POCO F5     | Snapdragon 7+ Gen 2   | Android 15 | 2026-05-01 | CVE-2025-21479 | 已測試 | |
 | sapphiren | Redmi Note 13 NFC                 | Snapdragon 685        | Android 15 | 2026-01-01 | ABL Cmdline Injection | 已測試 | |
-| creek     | Redmi 15 / POCO M7 Pro            | Snapdragon 685        | Android 15 | 2026-01-01 | ABL Cmdline Injection | 已測試 | |
+| creek     | Redmi 15 / POCO M7                | Snapdragon 685        | Android 15 | 2026-01-01 | ABL Cmdline Injection | 已測試 | |
+| spring    | Redmi 15R 5G/Redmi 15 5G/M7 Plus/M8s 5G/POCO M7 Plus 5G | Snapdragon 6s Gen 3 | Android 15 | 2025-09-01 | ABL Cmdline Injection | 已測試 | 黑屏無畫面 |
 | kunzite   | Redmi Note 15 5G                  | Snapdragon 6 Gen 3    | Android 15 | 2026-02-01 | ABL Cmdline Injection | 已測試 | 黑屏無畫面 |
 | ingres    | Redmi K50 Gaming / POCO F4 GT     | Snapdragon 8 Gen 1    | Android 14 | 2025-04-01 | CVE-2025-21479 | 已測試未成功 | |
 | diting    | Redmi K50 Ultra / Xiaomi 12T Pro  | Snapdragon 8+ Gen 1   | Android 15 | 2025-05-01 | CVE-2025-21479 | 已測試 | |
@@ -897,15 +935,113 @@ DARKNAVY 表示已檢查超過 30 台、來自 9 個廠商的 Android 裝置，�
 | `rodin` | Redmi Turbo 4 / POCO X7 Pro | 上游列為支援 | 未見官方 Release |
 | `dash` | Redmi Turbo 5 Max / POCO X8 Pro Max | 上游列為支援 | 未見官方 Release |
 | `xaga` | Redmi Note 11T Pro / Pro+ / POCO X4 GT / Redmi K50i | 上游列為支援 | 未見官方 Release |
+| `plato` | Xiaomi 12T | 上游列為支援 | 未見官方 Release |
 | N/A | Vivo X80 Pro | 已知受影響，未列入正式支援 | 上游作者曾確認其 `bl2_ext` 未被驗證；未見正式 port / Release |
 
-### 3.3 OPPO / Realme / OnePlus
+### 3.3 kaeru Fake Lock 原始碼支援清單
 
-- 待補充。
+參考來源：
 
-### 3.4 待驗證裝置
+- 專案：<https://github.com/R0rt1z2/kaeru>
+- Board 原始碼：<https://github.com/R0rt1z2/kaeru/tree/main/board>
+- 本次核對快照：<https://github.com/R0rt1z2/kaeru/commit/88234209a2cb2ec2b1475bbc77fbef3bfc754cbd>
 
-以下為公開資料/專案提及但尚未獨立驗證之清單（來源見 1.3）：
+以下只收錄在該快照中同時具備可建置目標、lock-state hook，且實際註冊 `fastboot oem bldr_spoof` 或提供等效 board-local 實作的機型。僅出現在舊 Release、僅有設定旗標，或只是移除解鎖警告的目標不列入。
+
+| Build target / codename | 裝置 | Fake-lock 實作 |
+| --- | --- | --- |
+| `next_ultra` | Digit Next Ultra | Board-local `bldr_spoof` 與 lock-state hook |
+| `X670` | Infinix NOTE 12 | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `amar_row_lte` | Lenovo Tab M10HD (2nd Gen) LTE | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `penangf` | Motorola G13 / G23 | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `fogorow` | Motorola G24 | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `lamu` | Motorola G15 / G05 | `CONFIG_SPOOF_SUPPORT` + shared `board-lamu` hook |
+| `lamulg` | Motorola E15 | `CONFIG_SPOOF_SUPPORT` + shared `board-lamu` hook |
+| `lagos` | Motorola G06 | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `lamuc` | Motorola G17 / G17 Power | `CONFIG_SPOOF_SUPPORT` + shared `board-lamu` hook |
+| `leade` | OPPO A5s | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `begonia` | Redmi Note 8 Pro | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `earth` | Redmi 12C / POCO C55 | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `fire` | Redmi 12 4G | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `fleur` | Redmi Note 11S 4G | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `lancelot` | Redmi 9 / Redmi 9 Prime | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `light` | POCO M4 5G / Redmi 10 5G / Redmi 11 Prime 5G / Redmi Note 11E / 11R | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `merlin` | Redmi 10X 4G / Redmi Note 9 | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `pissarro` | Redmi Note 11 Pro+ 5G | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `rosemary` | Redmi 10S / POCO M5s | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+| `ruby` | Redmi Note 12 Pro / Pro+ / Discovery 5G / Pro+ 5G | `CONFIG_SPOOF_SUPPORT` + board lock-state hook |
+
+> 核對備註：
+> - `wp56_defconfig` 雖啟用 `CONFIG_SPOOF_SUPPORT`，但相同快照中的 `board-wp56.c` 未安裝 lock-state hook，也未註冊 `bldr_spoof`，因此未列入。
+> - `RMX2156` 的 fake-lock patch 被包在未定義、也未由其 `defconfig` 啟用的 `CONFIG_FORCE_LOCK_SPOOF` 條件區塊內，因此未列入目前可建置支援。
+> - Meizu MX6 的 board patch 強制回報 **unlocked** 以開放操作，不是 fake lock，因此未列入。
+> - 上述是原始碼層級的支援判定，不代表每個 target 都有官方預建映像或已經本報告獨立實機驗證。修改後 LK 仍須透過已解鎖寫入路徑、cert bypass、Preloader / BootROM 漏洞或其他裝置特定方式部署。
+
+### 3.4 oppo-mtk-fastboot-unlock 上游測試清單
+
+參考來源：
+
+- 專案：<https://github.com/Shocked-Cat/oppo-mtk-fastboot-unlock>
+- 上游測試清單：<https://github.com/Shocked-Cat/oppo-mtk-fastboot-unlock/blob/main/support_list.md>
+
+> 註：
+> - 上游主 README 將主要適用範圍標為 Android 11 至 Android 14，並指出 Android 10 與 Android 15 以上通常不支援此 patch；實際例外與降級需求仍以各列狀態為準。
+> - `MTKClient`、`GeekFlashTool` 或 OPlus 售後工具可讀寫，不等於 Preloader patch 已成功開啟 fastboot。
+> - 上游清單目前只列出 OPPO 與 Realme 機型，尚未列出已驗證的 OnePlus 機型。
+
+| 裝置 | Device code | SoC | 上游狀態摘要 |
+| --- | --- | --- | --- |
+| OPPO A3 (2018) | `PADM00` | Helio P60 (`MT6771`) | MTKClient 可用；Android 10 不支援 patch，可能需回退 Android 8/9 |
+| OPPO A31 (2020) | `CPH2015` / `CPH2029` / `CPH2031` | Helio G35 (`MT6765`) | MTKClient 可用；目前 LK 不支援此 patch |
+| OPPO A9X | `PCEM00` / `PCET00` | Helio P70 (`MT6771`) | 完整支援（MTKClient） |
+| OPPO A15 | `CPH2185` | Helio P35 (`MT6765`) | MTKClient 可用；Android 10 實測未開啟 fastboot |
+| OPPO A16 | `CPH2269` | Helio P35 (`MT6765`) | 完整支援（MTKClient + DA） |
+| OPPO A16k | `CPH2349` / `CPH2351` | Helio G35 (`MT6765`) | 完整支援（MTKClient + DA + AUTH） |
+| OPPO A17 | `CPH2477` | Helio G35 (`MT6765`) | 完整支援（MTKClient） |
+| OPPO A17K | `CPH2471` | Helio G35 (`MT6765`) | 完整支援（MTKClient） |
+| OPPO A18 | `CPH2591` | Helio G85 (`MT6768/MT6769`) | MTKClient 存在 DAA 問題；`auth_sv5.auth` 已測 |
+| OPPO A35 | `PEFM00` | Helio P35 (`MT6765`) | MTKClient 可用；patch 未開啟 fastboot |
+| OPPO A54 4G | `CPH2239` | Helio G35 (`MT6765`) | MTKClient 存在 DAA 問題；AUTH 未測 |
+| OPPO A55 4G | `CPH2325` | Helio G35 (`MT6765`) | 完整支援（MTKClient） |
+| OPPO A55 5G | `PEMM00` / `PEMT00` | Dimensity 700 (`MT6833`) | 完整支援（GeekFlashTool） |
+| OPPO A56 5G | `PFVM110` | Dimensity 700 (`MT6833`) | 完整支援（MTKClient） |
+| OPPO A58 4G | `CPH2577` | Helio G85 (`MT6768/MT6769`) | MTKClient 存在 DAA 問題；AUTH 未測 |
+| OPPO A58x | `PHJ110` | Dimensity 700 (`MT6833`) | GeekFlashTool 僅列 Android 12；OPlus 售後工具列為完整支援 |
+| OPPO A73 5G | `CPH2161` | Dimensity 720 (`MT6853`) | MTKClient GUI 可用；CLI 需要 `auth_sv5.auth` |
+| OPPO A91 | `PFGM00` / `CPH2001` / `CPH2021` | Helio P70 (`MT6771`) | 需更新至 Android 11 |
+| OPPO A93s | `PFGM00` | Dimensity 700 (`MT6833`) | 完整支援（MTKClient） |
+| OPPO F31 Pro 5G | `CPH2763` | Dimensity 7300 (`MT6878`) | OPlus 售後工具可用；Android 15 以上 patch 未成功 |
+| OPPO Find X5 Pro | `PFFM20` | Dimensity 9000 (`MT6983`) | 需回退 Android 14（GeekFlashTool） |
+| OPPO Find X8s | `PKT110` | Dimensity 9400+ (`MT6991`) | OPlus 售後工具可用；Android 15 未能解鎖 fastboot |
+| OPPO K9 Pro | `PEYM00` | Dimensity 1200 (`MT6893`) | 完整支援（GeekFlashTool） |
+| OPPO Pad 2 | `OPD2201` | Dimensity 9000 (`MT6983`) | 完整支援（GeekFlashTool） |
+| OPPO Reno 10 5G | `CPH2531` | Dimensity 7050 (`MT6877V`) | MTKClient 存在 DAA 問題；AUTH 未測 |
+| OPPO Reno 11 5G | `CPH2599` | Dimensity 7050 (`MT6877V`) | PLPort 有 DAA 問題，BROM 有 DA ARB 問題；patch 未測 |
+| OPPO Reno 11F 5G | `CPH2603` | Dimensity 7050 (`MT6877V`) | MTKClient 存在 DAA 問題；AUTH 未測 |
+| OPPO Reno 3 5G | `CPH2125` | Dimensity 1000L (`MT6885`) | 完整支援（MTKClient） |
+| OPPO Reno 4 Lite | `CPH2125` | Helio P95 (`MT6779`) | 完整支援（MTKClient） |
+| OPPO Reno 5 Lite | `CPH2205` | Helio P95 (`MT6779`) | 完整支援（MTKClient） |
+| OPPO Reno 5 Z | `CPH2211` | Helio P90 (`MT6779`) | 完整支援（MTKClient + DA）；較新版本可能需要 test point |
+| OPPO Reno 6 5G | `CPH2251` / `PEQM00` | Dimensity 900 (`MT6877`) | 完整支援（GeekFlashTool）；上游推測 MTKClient 亦可用 |
+| OPPO Reno 6 Pro 5G | `CPH2249` / `PEPM00` | Dimensity 1200 (`MT6893`) | 需回退 Android 11；patch 完整支援 |
+| OPPO Reno 8 5G | `CPH2359` / `PGBM10` | Dimensity 1300 (`MT6893`) | 需回退 Android 12；patch 完整支援 |
+| OPPO Reno Z | `CPH1979` | Dimensity 900 (`MT6877`) | 上游列為 Android 11 完整支援（GeekFlashTool） |
+| Realme 1 | `CPH1859` / `CPH1861` | Helio P60 (`MT6771`) | MTKClient 可用；可能需回退 Android 8/9 |
+| Realme 12 Plus | `RMX3867` | Dimensity 7050 (`MT6877`) | MTKClient + DA 可用；Android 15 以上未開啟 fastboot，Android 14 未測 |
+| Realme C11 / C12 / C15 | `RMX2185` / `RMX2189` / `RMX2180` | Helio G35 (`MT6765`) | 更新至 Android 11 後完整支援（MTKClient） |
+| Realme 6 | `RMX2001` | Helio G90T (`MT6785`) | 完整支援（MTKClient） |
+| Realme 7 | `RMX2151` / `RMX2155` | Helio G95 (`MT6785`) | 完整支援（MTKClient） |
+| Realme 7 5G | `RMX2111` | Dimensity 800U (`MT6853`) | MTKClient 可用；patch 尚未實測 |
+| Realme GT Neo | `RMX3031` | Dimensity 1200 (`MT6893`) | 完整支援（GeekFlashTool） |
+| Realme GT Neo 2T | `RMX3357` / `RE5469` | Dimensity 1200 (`MT6893`) | 完整支援（GeekFlashTool） |
+| Realme Q2 Pro | `RMX2173` | Dimensity 800U (`MT6853`) | 完整支援（MTKClient + DA） |
+| Realme V11 5G | `RMX3121` / `RMX3122` | Dimensity 700 (`MT6833`) | 完整支援（GeekFlashTool） |
+| Realme V15 5G | `RMX3092` / `RMX3093` | Dimensity 800U (`MT6853`) | 完整支援（GeekFlashTool） |
+| Realme X7 Max | `RMX3031` | Dimensity 1200 (`MT6893`) | 需回退 Android 11；patch 完整支援 |
+
+### 3.5 Snapdragon 8 Elite Gen 5 / Snapdragon 8 Gen 5 GBL 候選裝置
+
+以下裝置使用 `gbl_root_canoe` 指定的 Snapdragon 8 Elite Gen 5 / Snapdragon 8 Gen 5 平台，並曾被公開專案或相關資料提及，但尚未由本報告逐一獨立驗證（來源見 1.3）。SoC 符合只代表通過第一層篩選，仍須確認 ABL 是否保留 GBL 漏洞、是否啟用 Baseband Guard，以及具體韌體與修補狀態：
 
 - Xiaomi 17 series
 - Redmi K90 Pro Max
