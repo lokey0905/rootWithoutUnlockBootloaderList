@@ -3,6 +3,10 @@
 > 用途：資安研究、風險追蹤與防護評估。
 > 
 > 注意：請勿用於未經授權的測試或攻擊行為。
+>
+> AI 協作整理模型：GPT-5.6 sol with daybreak
+>
+> 最後修改時間：2026-10-17 14:30:55 +08:00（Asia/Taipei）
 
 ## 1. 已知漏洞與攻擊鏈總覽
 
@@ -304,6 +308,87 @@ Qualcomm 給出的 CVSS v3.1 分數為 7.8（High），攻擊向量為本機、�
 - Qualcomm March 2026 Security Bulletin：<https://docs.qualcomm.com/product/publicresources/securitybulletin/march-2026-bulletin.html>
 - NVD：<https://nvd.nist.gov/vuln/detail/CVE-2026-21385>
 
+### 1.10 漏洞 10：DirtyFrag（CVE-2026-43284，Linux XFRM / ESP Page-Cache Write）
+
+DirtyFrag 是 Linux kernel XFRM / IPsec ESP 路徑中的 page-cache write 漏洞。當檔案頁面經由 `splice()` 進入 UDP / ESP 處理路徑時，受影響 kernel 可能在未先建立私有副本的情況下，直接於共享的 file-backed page 上進行解密或更新，讓本機低權限程序修改唯讀檔案在記憶體中的 page cache 內容。
+
+此漏洞特別值得納入 Android 追蹤，因為公開專案已不只提供 Linux 觸發器，而是將 `CVE-2026-43284` 發展為 Android temporary root 與 KernelSU late-load 工具鏈：
+
+- `DFRoot` 使用 page-cache write primitive 修改程序後續會執行的共享程式庫頁面，再載入相容的自訂 kernel module；專案定位是不需先解鎖 Bootloader 的 temporary root 工具。
+- `GhostSam` 同時整合 GhostLock 與 DirtyFrag 路徑。其 DirtyFrag 路徑依 Android KMI 選擇對應模組，公開 README 列出 `android12-5.10`、`android13-5.15`、`android15-6.6` 與 `android16-6.12` 已測試，其他 KMI 則標示未測試或僅部分支援。
+- `GhostSam` 公開列出的裝置目標包含 Galaxy S22、Galaxy S26 與 Galaxy Z Fold8；這是專案支援聲明，不代表同系列所有區域、SoC 與韌體都已獨立驗證。
+
+> 註：DirtyFrag 研究亦包含另一條 RxRPC page-cache write 路徑 `CVE-2026-43500`。本節與上述 Android 工具所指的是 XFRM / ESP 路徑的 `CVE-2026-43284`，兩者不應混為同一 CVE。
+
+#### 1.10.1 Android 影響評估
+
+- 公開工具已提供特定 Android kernel / KMI 組合的 temporary root 實作與支援聲明，公開程度已超出單純 crash PoC；各裝置結果仍須獨立重現。
+- 實際可利用性仍取決於 XFRM / ESP 功能是否可達、kernel 是否包含上游修補或 OEM 等效 backport、KMI 與模組是否匹配，以及 SELinux、seccomp 與 OEM 防護差異。
+- 成功取得 temporary root 或 late-load KernelSU 不等於 Bootloader 已解鎖，也不表示 AVB、Secure Boot 或持久化狀態已被改變。
+- Microsoft 公開報告描述有限的野外活動，其行為可能與 DirtyFrag 或 Copy Fail 技術相關；由於遙測無法將觀察結果唯一歸因至 `CVE-2026-43284`，本文將其標記為「存在有限疑似野外利用訊號」，而非已確認的單一 CVE 歸因。
+
+#### 1.10.2 公開狀態
+
+| 項目 | 狀態 |
+| --- | --- |
+| 漏洞類型 | Linux Kernel XFRM / ESP Page-Cache Write / Local Privilege Escalation |
+| Linux exploit | 已公開 |
+| Android 工具鏈 | 已公開，包含 DFRoot 與 GhostSam |
+| Android 適配方式 | 需匹配實際 kernel、KMI、修補狀態與可載入模組 |
+| 野外利用證據 | Microsoft 回報有限疑似活動，但未唯一歸因至本 CVE |
+| 是否直接解鎖 Bootloader | 否 |
+| 報告定位 | Kernel LPE / Temporary Root / 已公開武器化 Android 鏈 |
+
+參考資料：
+
+- DFRoot：<https://github.com/diabl0w/DFRoot>
+- GhostSam：<https://github.com/snothin/GhostSam>
+- Linux mainline 修補：<https://git.kernel.org/linus/f4c50a4034e62ab75f1d5cdd191dd5f9c77fdff4>
+- Microsoft DirtyFrag active-attack 研究：<https://www.microsoft.com/en-us/security/blog/2026/05/08/active-attack-dirty-frag-linux-vulnerability-expands-post-compromise-risk/>
+- NVD：<https://nvd.nist.gov/vuln/detail/CVE-2026-43284>
+
+### 1.11 漏洞 11：CVE-2026-64560（POSIX CPU Timers Non-leader Exec UAF）
+
+`CVE-2026-64560` 是 Linux kernel POSIX CPU timer 路徑中的 race-condition Use-After-Free。當非 leader thread 執行 `exec()` 並替換 thread-group leader 時，另一個執行緒可能在刪除或更新 CPU timer 的過程中觀察到舊 leader，使仍掛在 timer queue 內的 `struct k_itimer` 被釋放；後續 timer 操作即可存取已釋放物件。
+
+此漏洞的 CVSS v3.1 分數為 7.8（High），攻擊向量為本機、低權限、無需使用者互動。公開 exploit 已在 Pixel 10 Pro 的指定 Android 17 build 上取得 root shell 並修改 SELinux 狀態，後續亦出現 Xiaomi 15 與 Redmi K90 的裝置特定移植。
+
+#### 1.11.1 Android 公開適配狀態
+
+| 裝置 / 專案 | 公開狀態 | 證據邊界 |
+| --- | --- | --- |
+| Pixel 10 Pro | NebuSec / CyberMeowfia 公開完整 exploit，指定 July 2026 Android 17 build | 原始公開驗證目標；結果仍綁定該 kernel 與 build |
+| Xiaomi 15 (`dada`) | 公開 exact-build adaptation，綁定 `OS4.0.0.8.XOCCNXM`、指定 fingerprint、kernel 與映像 hash | 專案宣稱提供當次開機 temporary root；本報告未獨立重現 |
+| Redmi K90 (`annibale`) | 公開 fork 宣稱已完成實機 full chain | README 仍保留上游 `dada` fingerprint、kernel 與部分 metadata，應先視為專案聲明並等待獨立交叉驗證 |
+
+#### 1.11.2 影響與限制
+
+- 這不是只依 Android 版本或 kernel 大版本即可判定的通用 exploit。OEM backport、allocator 行為、頁面配置、offset、race 參數與 exact build 都會影響利用結果。
+- 公開移植專案已使其進入「積極適配 / 武器化」階段，但截至本次整理，尚未找到可將 `CVE-2026-64560` 明確標為已遭野外利用的官方證據。
+- 目前公開成果屬於 runtime kernel LPE / temporary root；它本身不直接解鎖 Bootloader，也不保證能跨重開機持久化。
+- 同一 SoC 或相近 kernel 字串不代表既有 payload 可直接共用。應要求完整 fingerprint、`/proc/version`、boot / Image hash 與實機 `uid=0` 證據一致。
+
+#### 1.11.3 公開狀態
+
+| 項目 | 狀態 |
+| --- | --- |
+| 漏洞類型 | Linux Kernel POSIX CPU Timers UAF / Local Privilege Escalation |
+| 官方嚴重度 | High（CVSS 7.8） |
+| Android 完整 exploit | 已公開 |
+| Android 實機適配 | 已有 Pixel 與 Xiaomi 特定 build 案例 |
+| 是否通用 | 否，需逐裝置、逐韌體、逐 kernel 適配 |
+| 已確認野外利用 | 未確認 |
+| 是否直接解鎖 Bootloader | 否 |
+| 報告定位 | Kernel LPE / Temporary Root / 積極移植中的 N-day |
+
+參考資料：
+
+- GitHub Advisory：<https://github.com/advisories/GHSA-78ph-mc3q-52vv>
+- NebuSec 漏洞與 exploit 說明：<https://nebusec.ai/buglist/CVE-2026-64560/>
+- Xiaomi 15 (`dada`) 適配：<https://github.com/quyicheng03-boop/xiaomi15-dada-cve-2026-64560>
+- Redmi K90 (`annibale`) 適配：<https://github.com/morannlx/RedmiK90-dada-cve-2026-64560>
+- NVD：<https://nvd.nist.gov/vuln/detail/CVE-2026-64560>
+
 ## 2. 可能被利用的後續攻擊手法
 
 本節整理的是公開研究中常被搭配討論的攻擊手法。  
@@ -316,9 +401,11 @@ Qualcomm 給出的 CVSS v3.1 分數為 7.8（High），攻擊向量為本機、�
 - 常見需要搭配哪些條件
 - 對裝置、App 或遠端服務可能造成什麼影響
 
-> 流程圖閱讀方式：各小節代表不同攻擊面，並非必然依照 `2.1` 到 `2.7` 串成同一條漏洞鏈；菱形節點用來表示必要條件、修補狀態或信任邊界，任一條件不成立都可能使該路徑停止。
+> 流程圖閱讀方式：各小節代表不同攻擊面，並非必然依照 `2.1` 到 `2.8` 串成同一條漏洞鏈；菱形節點用來表示必要條件、修補狀態或信任邊界，任一條件不成立都可能使該路徑停止。
 
 其中 `2.5` 與 `2.6` 特別描述 **post-root boot-chain manipulation**：先由其他漏洞取得 root / kernel control，再將該權限轉化為 GPT、LK 或其他 boot-chain 分區的寫入能力，以進一步影響 Bootloader 狀態。兩節不是用來說明第一階段如何取得 root。
+
+`2.7` 與 `2.8` 則描述 **post-root / post-bootchain trust-boundary expansion**：前者嘗試將 root 延伸為 PIN recovery / CE bypass，後者關注 TEE、KeyMint、RKP 與 Keybox 身分材料是否可能被擷取、重新簽發或移植。
 
 ### 2.1 本機繞過：裝置端信任狀態偽裝
 
@@ -853,13 +940,102 @@ DARKNAVY 表示已檢查超過 30 台、來自 9 個廠商的 Android 裝置，�
 - DARKNAVY 研究全文：<https://www.darknavy.org/blog/the_biometric_authtoken_heist/>
 - Samsung Mobile Security（SMR Jun-2025 Release 1）：<https://security.samsungmobile.com/securityUpdate.smsb?month=06&year=2025>
 
+### 2.8 Post-root TEE / RKP 攻擊：Keybox / 身分材料擷取與憑證簽發濫用
+
+參考專案與規格：
+
+- TEE Attestation Extraction：<https://github.com/gungnir-sanye/tee-attestation-extraction>
+- Duck ToolBox：<https://github.com/eltavine/Duck-ToolBox>
+- AOSP `IRemotelyProvisionedComponent`：<https://android.googlesource.com/platform/hardware/interfaces/+/f84593a4594c3b7e748e29d4cdd1c5434fea6e54/security/rkp/aidl/android/hardware/security/keymint/IRemotelyProvisionedComponent.aidl>
+- AOSP RKP `DeviceInfo`：<https://android.googlesource.com/platform/hardware/interfaces/+/9b13077c4c0e2a45c49fe31cfe6029a117011b8e/security/rkp/aidl/android/hardware/security/keymint/DeviceInfo.aidl>
+- AOSP `CSR_V2` CDDL：<https://android.googlesource.com/platform/hardware/interfaces/+/04d2ed4ff01dcfb62d8e6fce492d315b3749e3cc/security/rkp/aidl/android/hardware/security/keymint/generateCertificateRequestV2.cddl>
+
+這一類風險適合納入本報告，但應歸類為 **已取得 root、kernel 或 boot-chain 控制後的 attestation trust compromise**，而不是第一階段 root 漏洞。它與 `2.2` 的差異在於：`2.2` 討論驗證結果在傳輸或伺服器綁定上的轉送、替換與重放；本節則討論裝置端 attestation 身分材料本身被擷取，或 KeyMint / RKP 簽發流程被當成 certification oracle。
+
+#### 2.8.1 兩種不同的公開路徑
+
+| 路徑 | Bootloader 鎖態需求 | 前置條件與作用面 | 可能產物 | 目前公開證據 |
+| --- | --- | --- | --- | --- |
+| 裝置特定 TEE / KeyMint 擷取 | **不要求實體上鎖。** Nothing Phone (2a) 與 Redmi Note 11T Pro 的公開研究流程明示從解鎖狀態建立研究環境；原廠 locked 狀態通常反而會阻止載入修改後的 LK / TEE / TA，除非另有啟動鏈漏洞提供等效控制 | 已建立可控制的 boot-chain / TEE 研究環境，並使用與裝置、TA、槽位及韌體完全匹配的診斷 patch | 既有 Keybox、RKP seed / CDI 衍生身分材料、憑證鏈 | `tee-attestation-extraction` 整理 Nothing Phone (2a)、Redmi Note 11T Pro、Redmi K70E 三條裝置路線；公開副本已去敏，且專案明示未逐項人工獨立重現 |
+| Qualcomm KeyMint CSR 簽發濫用 | **TA 呼叫本身不要求上鎖或重新上鎖。** 已有 root 且能直連 TA 即可嘗試；公開成功案例未交代測試機的實際鎖態，因此不能據此宣稱 unlocked 狀態必然獲得 Google 簽發 | 已有 root，且可呼叫特定 QTI KeyMint TA 私有介面；目標 TA 必須確實存在 `MacedPublicKey` MAC / 來源驗證缺口 | 由 normal world 軟體私鑰配對的 RKP certificate chain / `keybox.xml` | 公開分析文章主張特定 QTI KeyMint 可完成簽發；Duck ToolBox 已實作 Device RKP Issuer，但其 README 的 OnePlus PJX110 測試回傳 TA `-18` 且未簽發 Keybox，仍需逐裝置獨立驗證 |
+
+兩條路徑都不應描述為「必須先將 Bootloader 上鎖」。需要分開判斷三件事：第一，本機是否能載入研究元件或呼叫 TA；第二，Google RKP 後端是否接受並簽發；第三，所得材料能否在後續 Key Attestation / Play Integrity 情境中使用。AOSP 的 RKP `DeviceInfo` 明確包含 `bootloader_state`、`vb_state` 與 `vbmeta_digest`，所以 unlocked 不會自動阻止本機擷取或 TA 呼叫，但仍可能影響後端判斷與產物的實際價值。Fake lock 也只能視為可能改變狀態呈現的另一階段，不能直接等同於 RKP 後端必然接受。
+
+第二條路徑不是把既有 `CDI_Leaf` 或硬體私鑰直接「導出」。其風險在於 normal world 先產生可攜出的 P-256 私鑰，再要求受影響 KeyMint TA 為對應公鑰建立 `CSR_V2`；若裝置端驗證與 Google RKP 後端都接受，最後可能得到一組「憑證鏈有效、私鑰卻位於 normal world」的可移植 attestation 身分。
+
+#### 2.8.2 可能被攻擊的流程
+
+```mermaid
+flowchart TD
+    A["已取得 root、kernel 或 boot-chain 控制"] --> B{"目標裝置存在何種可達路徑"}
+
+    B -->|"裝置特定 TEE 擷取"| C{"已解鎖，或漏洞可提供等效 boot-chain 載入控制嗎"}
+    C -->|"否"| C0["停止：原廠 locked 驗證阻止載入修改後 LK / TEE / TA"]
+    C -->|"是"| D["建立與 TA、槽位、韌體及映像 hash 匹配的研究環境"]
+    D --> E{"是否取得可驗證的既有 attestation 材料"}
+    E -->|"否"| E0["停止：不可把日誌、模擬資料或單次成功啟動視為 Keybox / RKP seed"]
+    E -->|"是"| F["驗證格式、私鑰與憑證公鑰、CSR 身分及證書鏈關係"]
+    F --> G{"取得的是哪一類材料"}
+    G -->|"既有 Factory Keybox"| P1["既有私鑰與憑證鏈外流"]
+    G -->|"RKP / CDI 衍生身分"| M["以同輪 DICE 與 DeviceInfo 建立 CSR"]
+
+    B -->|"Qualcomm KeyMint CSR 路徑"| H["已有 root 且可直連 QTI KeyMint TA；不要求改變鎖態"]
+    H --> I["在 normal world 產生可匯出的 P-256 keypair"]
+    I --> J["將公鑰交由 QTI KeyMint TA 建立 CSR_V2"]
+    J --> K{"TA 是否正確驗證 MAC 與金鑰來源"}
+    K -->|"是"| K0["拒絕非安全硬體來源金鑰，路徑停止"]
+    K -->|"否"| L["TA 對攻擊者控制的公鑰建立有效 CSR"]
+
+    M --> N["CSR 攜帶 DICE 與 DeviceInfo，包括 bootloader_state / vb_state / vbmeta_digest"]
+    L --> N
+    N --> O{"Google RKP 後端是否接受並簽發"}
+    O -->|"否"| O0["只有本機產物，沒有可用的 RKP 憑證鏈"]
+    O -->|"是"| P2["取得與 normal-world 私鑰配對的 RKP 憑證鏈 / Keybox"]
+
+    P1 --> Q["進入後續 attestation 身分使用階段"]
+    P2 --> Q
+    Q --> R{"憑證仍有效、未撤銷，且目標後端接受嗎"}
+    R -->|"否"| S["實際濫用價值受限"]
+    R -->|"是"| T["遠端服務可能錯判裝置仍具可信硬體身分"]
+```
+
+此圖刻意保留鎖態、材料類型與後端簽發的不同關卡。取得 root 只代表具備研究或呼叫條件，並不自動代表能讀出 TEE 祕密；unlocked 也不等於 Google 一定拒絕或接受。能否本機執行、能否取得 Google 簽發，以及憑證能否通過後續遠端驗證，必須分別記錄。
+
+#### 2.8.3 證據與影響邊界
+
+- `tee-attestation-extraction` 的 Nothing Phone (2a) 與 Redmi Note 11T Pro 公開流程明示使用 Bootloader 解鎖狀態；這支持「擷取本身不要求上鎖」，但不能外推為任意 unlocked 裝置都可擷取。
+- `tee-attestation-extraction` 的公開副本是去敏後的研究檔案，明示內容由 AI 根據既有工程資料整理，未逐項人工執行、獨立重現或簽字確認；真實 Keybox、seed、私鑰與裝置唯一材料不在公開內容中。
+- QTI CSR oracle 公開文章明示 CSR 生成不修改 Bootloader 鎖態；文章的成功案例未揭露執行時鎖態，因此目前只能確認「呼叫不以重新上鎖為必要動作」，不能確認 unlocked 與 locked 在 Google RKP 後端具有相同結果。
+- Duck ToolBox 的 TEE Attestation Extractor 目前負責離線解析、配對與驗證既有 capture，不包含取得裝置 capture 或製作韌體 patch 的能力。
+- Duck Device RKP Issuer 實作的是「以裝置 KeyMint 為軟體產生公鑰建立 CSR」的路徑，不等於導出 HUK、UDS、`CDI_Leaf`、RPMB key、AVB / Secure Boot 私鑰或 StrongBox / eSE 祕密。
+- 取得 `keybox.xml`、私鑰與憑證鏈不保證能通過 Play Integrity `STRONG_INTEGRITY`。實際結果仍取決於憑證有效期、撤銷狀態、後端政策、裝置屬性一致性與注入 / 使用環境。
+- 此攻擊面高度依賴 SoC、TEE OS、KeyMint TA 版本、OEM 韌體與後端行為，不應推論所有 Qualcomm、MediaTek 或 Android 裝置皆受影響。
+
+#### 2.8.4 風險定位
+
+| 分類 | 內容 |
+| --- | --- |
+| 類型 | Post-root / Post-bootchain TEE and Attestation Trust Compromise |
+| 是否直接取得 root | 否，root、kernel 或 boot-chain 控制是前置條件 |
+| 主要影響 | Keybox / RKP 身分材料外流、CSR 簽發濫用、可移植 attestation 身分 |
+| 相關元件 | TEE / TrustZone、KeyMint、RKP、DICE / CDI、Keybox、Google RKP backend |
+| 是否通用 | 否，需逐 SoC、TA、韌體、裝置與後端驗證 |
+| 與 2.2 的差異 | 2.2 是傳輸與伺服器驗證繞過；2.8 是裝置端信任材料或簽發邊界受損 |
+| 報告定位 | 取得高權限後，將裝置控制擴大為遠端硬體身分與 attestation 信任風險 |
+
+補充分析：
+
+- QTI KeyMint CSR 簽發路徑公開分析：<https://bbs.kanxue.com/thread-293244.htm>
+
 ## 3. 裝置受影響清單
 
 ### 3.1 Xiaomi / Redmi / POCO
 
 > 註：  
-> - 此表格僅表示自行測試的機型與漏洞狀態，並不代表其他未列出的機型或版本不受影響
-> - 表格中的「已測試」狀態表示成功將 Selinux 策略修改成 Permissive 狀態，「未測試」狀態也不代表該機型一定不受影響，而是尚未完成獨立驗證。
+> - 本表所有標示為「已測試」或「已測試未成功」的結果，均使用 Coolapk 使用者「@羊了个羊了个羊了个羊」所提供的工具進行測試。
+> - 「已測試」表示在當時的裝置、韌體與工具組合下，成功將 SELinux 狀態修改為 permissive；「已測試未成功」只表示該次測試未能成功，不代表裝置或該韌體已確認不受影響。
+> - 「未測試」表示尚未使用相同方式完成驗證；未列出的機型與版本同樣不能據此判定為不受影響。
+> - 外部公開專案所宣稱的裝置適配另列於各漏洞章節；在未獨立重現前，不會直接併入本表的「已測試」狀態。
 
 | codename | 手機型號名稱 | 平台 | 最後測試 Android 版本 | 最後測試安全性修補日期 | 漏洞名稱 / CVE | 狀態 | 備註 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
