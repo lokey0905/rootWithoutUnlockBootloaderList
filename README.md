@@ -1,12 +1,50 @@
-﻿# 近期被利用之「免解鎖 Bootloader 取得 Root」漏洞列表
+# 近期被利用之「免解鎖 Bootloader 取得 Root」漏洞列表
+
+**語言：** 繁體中文 | [English](README.en.md)
+
+本專案持續整理 Android platform security 研究，涵蓋 Linux kernel / GPU 本地提權、temporary root、Qualcomm ABL / GBL、MediaTek boot chain、AVB / Verified Boot，以及裝置與韌體適用性。內容以風險追蹤、修補比對與可重現性紀錄為主，不提供解鎖服務或販售 exploit。
 
 > 用途：資安研究、風險追蹤與防護評估。
-> 
+>
 > 注意：請勿用於未經授權的測試或攻擊行為。
 >
-> AI 協作整理模型：GPT-5.6 sol with daybreak
+> AI 協作整理模型：GPT-5.6 sol with daybreak；技術結論仍以原始來源與維護者核對結果為準。
 >
-> 最後修改時間：2026-10-17 14:30:55 +08:00（Asia/Taipei）
+> 最後整理時間：2026-10-25（Asia/Taipei）
+
+## Project scope / 專案範圍
+
+- 追蹤公開 CVE、上游修補、PoC 與後續攻擊鏈研究。
+- 記錄可能受影響的 Android 裝置、SoC、kernel / firmware 條件與修補狀態。
+- 區分維護者實測、上游文件、社群回報、原始碼／韌體分析與尚未驗證的推論。
+- 保留裝置與韌體版本邊界；支援清單、相同 SoC 或相同 kernel 大版本均不等同於實機可利用性。
+
+## Evidence status / 證據狀態
+
+| 狀態 | 使用方式 |
+| --- | --- |
+| `Verified / Tested` | 維護者已在表列裝置、韌體與工具組合上重現所述結果。 |
+| `Tested - Not reproduced` | 維護者已測試但未重現；不代表裝置或該版本已確認不受影響。 |
+| `Upstream documented` | 原始專案、官方公告、修補提交或研究者文件已明確記載；本專案未必獨立重現。 |
+| `Community reported` | 第三方社群回報；若只有單一來源，不視為已確認結果。 |
+| `Reverse-engineered` | 維護者依公開 source、合法取得的 firmware / application 或自有裝置獨立分析所得。此標籤描述技術事實或觀察，不代表納入第三方 implementation。 |
+| `Potentially affected` | 依 SoC、kernel branch、元件或程式路徑推定可能受影響，仍需精確版本與實機驗證。 |
+| `Unverified` | 尚無足夠證據或尚未由維護者測試。 |
+
+## Research methodology / 研究方法
+
+本專案以公開 CVE、官方 security bulletin、upstream source / patches、公開研究與 PoC 文件為主要來源。部分 interoperability、API / protocol、boot-chain 或裝置行為資訊，來自維護者在自有設備或合法取得的 firmware / applications 上所做的獨立分析。整理時盡可能保留原始連結、commit 或版本資訊，並明確區分 tested、reported、reverse-engineered、inferred 與 unverified 結果。
+
+## Ongoing maintenance / 持續維護
+
+維護範圍包括新 CVE / exploit technique 追蹤、affected-device / firmware matrix 更新、upstream patch status、實機驗證結果、reference correction，以及對社群回報的後續交叉驗證。既有結論會隨上游修補、專案封存或新的實機證據修正。
+
+## Content provenance / 內容來源
+
+- 除非段落另有標示，本文敘述、比較、表格結構與 Mermaid 圖為本專案的整理與編排。
+- 外部 PoC、source、文章與產品頁僅以連結及短引用作為參考；其程式碼、文件、商標與素材仍受各自原始授權或權利約束，不因本專案採用 `GPL-3.0-only` 而被重新授權。
+- 本 repository 目前未納入第三方圖片、logo、裝置照片、截圖、APK、boot image 或其他二進位資產。
+- 依上游清單或原始碼自行撰寫的事實摘要，會在該節保留來源、證據狀態與授權邊界。
 
 ## 1. 已知漏洞與攻擊鏈總覽
 
@@ -23,6 +61,8 @@ CVE-2025-21479 的直接漏洞原語是 Qualcomm Adreno GPU 路徑中的未授�
 這點與後述 ABL Cmdline Injection 不同：ABL 類問題是透過啟動參數注入，直接使系統以 `androidboot.selinux=permissive` 啟動。無論走哪一條路徑，取得 permissive 都不等於自動取得 root；後續仍可能需要 Xiaomi `IMQSNative` / `MQSAS`、Magica 所代表的 isolated service / isolated process 路徑，或其他高權限媒介。
 
 社群實測回報（其他機型待驗證）：
+
+> 證據狀態：`Community reported`。下列為單一社群來源，尚未提升為本專案的 `Verified / Tested` 結果。
 
 - 來源：Coolapk 使用者「@羊了个羊了个羊了个羊」
 - 連結：<https://www.coolapk.com/feed/70655251?s=NTFjZmEwYzkyN2NkOGUyZzY5YzYxOTM4ega1601>
@@ -154,7 +194,7 @@ service call miui.mqsas.IMQSNative 21 i32 1 s16 "命令" i32 1 s16 "参数列表
 > - MTK 裝置的可利用性高度依賴廠商實作。即使同為 MTK SoC，不同品牌、不同 preloader、不同 DA / auth 策略，結果也可能完全不同。
 > - 已知 OPPO / Realme / OnePlus 的部分 MTK 裝置已在安全補丁 2025 年 Android 13 以上設備加密 DA，加密後僅可使用售後授權工具或是降級系統版本方式利用此類漏洞鏈。
 
-完整上游測試狀態整理於 3.4「oppo-mtk-fastboot-unlock 上游測試清單」。
+上游支援範圍摘要與完整清單連結整理於 3.4「oppo-mtk-fastboot-unlock 上游支援摘要」。
 
 ---
 
@@ -168,6 +208,8 @@ service call miui.mqsas.IMQSNative 21 i32 1 s16 "命令" i32 1 s16 "参数列表
 
 - <https://github.com/R0rt1z2/fenrir>
 
+> 上游狀態（2026-10-25）：repository 已於 2026-09-20 封存，README 並標示為 deprecated；本報告保留下列內容作為歷史研究與支援快照，不將其描述為持續維護中的上游專案。
+
 `fenrir` 是針對 MediaTek secure boot chain 邏輯缺陷的公開 PoC。當 `seccfg` 為 unlocked 狀態時，部分受影響 Preloader 未正確驗證 `bl2_ext`；而 `bl2_ext` 仍以 EL3 執行並負責驗證後續映像，因此修改後的 `bl2_ext` 可破壞後續 chain of trust。
 
 公開說明中的重點包含：
@@ -177,9 +219,9 @@ service call miui.mqsas.IMQSNative 21 i32 1 s16 "命令" i32 1 s16 "参数列表
 - PoC 亦包含 lock-state spoofing，使實際 unlocked 的裝置向後續元件呈現 `locked` 狀態。
 - 專案最初以 **Nothing Phone (2a)** / **CMF Phone 1** 為主要目標，之後擴展至多款 Nothing、CMF、Lenovo、Tecno、Zinwa、Redmi、POCO 與 Xiaomi 裝置。
 - `fenrir` 上游已於 2026 年 9 月封存並標示為 deprecated；現有原始碼與裝置適配仍可供研究，但不應預期上游持續維護。
-- Vivo X80 Pro 被作者列為已知受影響，但尚未列入正式支援清單。
+- Vivo X80 Pro 被作者列為已知受影響，但未列入封存前的正式支援清單。
 
-完整支援狀態與裝置清單整理於 3.2「fenrir 支援與已知受影響裝置」。
+封存前的支援範圍摘要與完整清單連結整理於 3.2「fenrir 封存上游支援摘要」。
 
 #### 1.5.2 kaeru：LK Payload 與 Lock-State Spoofing
 
@@ -791,7 +833,7 @@ AOSP 定義了 `LOCKED` / `UNLOCKED` 的基本語意，但裝置如何保存、�
 
 Xiaomi 的官方解鎖流程包含小米帳號與裝置綁定、等待期及伺服器端授權。針對部分 Xiaomi MediaTek 裝置，社群逆向與實機觀察進一步指出，stock LK 可能同時檢查 `seccfg` 與 RPMB 中的裝置特定解鎖驗證資料；只修改 `seccfg`，或換用略過該檢查的 patched LK，未必會建立與官方流程相同的完整解鎖狀態。
 
-> 注意：上述 RPMB 雙重檢查目前主要來自特定 Xiaomi MediaTek 機型的社群逆向與實測，不應直接外推至全部 Xiaomi、Qualcomm 或 MediaTek 裝置。
+> 證據狀態：`Community reported` / `Unverified`。上述 RPMB 雙重檢查目前主要來自特定 Xiaomi MediaTek 機型的社群逆向與實測，本專案尚未獨立重現，不應直接外推至全部 Xiaomi、Qualcomm 或 MediaTek 裝置。
 
 #### 2.6.3 流程示意
 
@@ -865,6 +907,8 @@ flowchart TD
 參考研究：
 
 - DARKNAVY - The Biometric AuthToken Heist：<https://www.darknavy.org/blog/the_biometric_authtoken_heist/#disclosure>
+
+> 證據狀態：`Upstream documented`。研究文章提供多裝置結果與技術細節；本專案未取得完整跨機型 PoC，也未獨立重現各廠商案例。
 
 此攻擊手法不是用來取得 Android root，而是在攻擊者已具備 Android normal world root 或 kernel（EL1）控制能力後，進一步攻擊 biometric Trusted Application（TA）、AuthToken 與 KeyMint / Gatekeeper 之間的信任關係。
 
@@ -950,6 +994,8 @@ DARKNAVY 表示已檢查超過 30 台、來自 9 個廠商的 Android 裝置，�
 - AOSP RKP `DeviceInfo`：<https://android.googlesource.com/platform/hardware/interfaces/+/9b13077c4c0e2a45c49fe31cfe6029a117011b8e/security/rkp/aidl/android/hardware/security/keymint/DeviceInfo.aidl>
 - AOSP `CSR_V2` CDDL：<https://android.googlesource.com/platform/hardware/interfaces/+/04d2ed4ff01dcfb62d8e6fce492d315b3749e3cc/security/rkp/aidl/android/hardware/security/keymint/generateCertificateRequestV2.cddl>
 
+> 證據狀態：AOSP 介面與欄位為 `Upstream documented`；第三方擷取／簽發路徑為 `Upstream documented` 或 `Community reported`，本專案未逐裝置獨立重現。
+
 這一類風險適合納入本報告，但應歸類為 **已取得 root、kernel 或 boot-chain 控制後的 attestation trust compromise**，而不是第一階段 root 漏洞。它與 `2.2` 的差異在於：`2.2` 討論驗證結果在傳輸或伺服器綁定上的轉送、替換與重放；本節則討論裝置端 attestation 身分材料本身被擷取，或 KeyMint / RKP 簽發流程被當成 certification oracle。
 
 #### 2.8.1 兩種不同的公開路徑
@@ -1032,87 +1078,72 @@ flowchart TD
 ### 3.1 Xiaomi / Redmi / POCO
 
 > 註：  
-> - 本表所有標示為「已測試」或「已測試未成功」的結果，均使用 Coolapk 使用者「@羊了个羊了个羊了个羊」所提供的工具進行測試。
-> - 「已測試」表示在當時的裝置、韌體與工具組合下，成功將 SELinux 狀態修改為 permissive；「已測試未成功」只表示該次測試未能成功，不代表裝置或該韌體已確認不受影響。
-> - 「未測試」表示尚未使用相同方式完成驗證；未列出的機型與版本同樣不能據此判定為不受影響。
-> - 外部公開專案所宣稱的裝置適配另列於各漏洞章節；在未獨立重現前，不會直接併入本表的「已測試」狀態。
+> - 本表所有標示為 `Verified / Tested` 或 `Tested - Not reproduced` 的結果，均使用 Coolapk 使用者「@羊了个羊了个羊了个羊」所提供的工具進行測試。
+> - `Verified / Tested` 表示在表列裝置、韌體與工具組合下成功將 SELinux 狀態修改為 permissive；`Tested - Not reproduced` 只表示該次測試未能成功，不代表裝置或該韌體已確認不受影響。
+> - `Unverified` 表示尚未使用相同方式完成驗證；未列出的機型與版本同樣不能據此判定為不受影響。
+> - 外部公開專案所宣稱的裝置適配另列於各漏洞章節；在未獨立重現前，不會直接併入本表的 `Verified / Tested` 狀態。
+> - 歷史測試未全部保留完整 build fingerprint / ROM build；欄位為 `N/A` 的 `Verified / Tested` 紀錄屬於 metadata incomplete，不能外推至其他韌體版本。
 
-| codename | 手機型號名稱 | 平台 | 最後測試 Android 版本 | 最後測試安全性修補日期 | 漏洞名稱 / CVE | 狀態 | 備註 |
+| codename | 手機型號名稱 | 平台 | 最後測試 Android 版本 | 最後測試安全性修補日期 | 漏洞名稱 / CVE | 證據狀態 | 備註 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| cupid     | Xiaomi 12         | Snapdragon 8 Gen 1    | Android 15 | 2025-11-01 | CVE-2025-21479 | 已測試未成功 | |
-| zeus      | Xiaomi 12 Pro     | Snapdragon 8 Gen 1    | N/A | N/A | CVE-2025-21479 | 未測試 | |
-| mayfly    | Xiaomi 12S        | Snapdragon 8+ Gen 1   | N/A | N/A | CVE-2025-21479 | 未測試 | |
-| unicorn   | Xiaomi 12S Pro    | Snapdragon 8+ Gen 1   | N/A | N/A | CVE-2025-21479 | 未測試 | |
-| thor      | Xiaomi 12S Ultra  | Snapdragon 8+ Gen 1   | N/A | N/A | CVE-2025-21479 | 未測試 | |
-| fuxi      | Xiaomi 13         | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| nuwa      | Xiaomi 13 Pro     | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| ishtar    | Xiaomi 13 Ultra   | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| houji     | Xiaomi 14         | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | 已測試 | |
-| shennong  | Xiaomi 14 Pro     | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| aurora    | Xiaomi 14 Ultra   | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| dada      | Xiaomi 15         | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| haotian   | Xiaomi 15 Pro     | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| xuanyuan  | Xiaomi 15 Ultra   | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| pudding   | Xiaomi 17         | Snapdragon 8 Elite Gen 5  | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| pandora   | Xiaomi 17 Pro     | Snapdragon 8 Elite Gen 5  | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| popsicle  | Xiaomi 17 Pro Max | Snapdragon 8 Elite Gen 5  | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| nezha     | Xiaomi 17 Ultra   | Snapdragon 8 Elite Gen 5  | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| liuqin    | Xiaomi Pad 6 Pro              | Snapdragon 8+ Gen 1   | N/A | N/A | CVE-2025-21479 | 未測試 | |
-| yudi      | Xiaomi Pad 6 Max 14           | Snapdragon 8+ Gen 1   | N/A | N/A | CVE-2025-21479 | 未測試 | |
-| sheng     | Xiaomi Pad 6S Pro 12.4        | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| uke       | Xiaomi Pad 7 / POCO Pad X1    | Snapdragon 7+ Gen 3   | N/A | N/A | CVE-2025-21479 | 未測試 | |
-| muyu      | Xiaomi Pad 7 Pro              | Snapdragon 8s Gen 3   | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| yupei     | Xiaomi Pad 8                  | Snapdragon 8s Gen 4   | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| piano     | Xiaomi Pad 8 Pro              | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| ruyi      | Xiaomi MIX Flip               | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| bixi      | Xiaomi MIX Flip 2             | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| babylon   | Xiaomi MIX Fold 3             | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| goku      | Xiaomi MIX Fold 4             | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| marble    | Redmi Note 12 Turbo / POCO F5     | Snapdragon 7+ Gen 2   | Android 15 | 2026-05-01 | CVE-2025-21479 | 已測試 | |
-| sapphiren | Redmi Note 13 NFC                 | Snapdragon 685        | Android 15 | 2026-01-01 | ABL Cmdline Injection | 已測試 | |
-| creek     | Redmi 15 / POCO M7                | Snapdragon 685        | Android 15 | 2026-01-01 | ABL Cmdline Injection | 已測試 | |
-| spring    | Redmi 15R 5G/Redmi 15 5G/M7 Plus/M8s 5G/POCO M7 Plus 5G | Snapdragon 6s Gen 3 | Android 15 | 2025-09-01 | ABL Cmdline Injection | 已測試 | 黑屏無畫面 |
-| kunzite   | Redmi Note 15 5G                  | Snapdragon 6 Gen 3    | Android 15 | 2026-02-01 | ABL Cmdline Injection | 已測試 | 黑屏無畫面 |
-| ingres    | Redmi K50 Gaming / POCO F4 GT     | Snapdragon 8 Gen 1    | Android 14 | 2025-04-01 | CVE-2025-21479 | 已測試未成功 | |
-| diting    | Redmi K50 Ultra / Xiaomi 12T Pro  | Snapdragon 8+ Gen 1   | Android 15 | 2025-05-01 | CVE-2025-21479 | 已測試 | |
-| mondrian  | Redmi K60 / POCO F5 Pro           | Snapdragon 8+ Gen 1   | Android 15 | 2026-02-01 | CVE-2025-21479 | 已測試 | |
-| socrates  | Redmi K60 Pro                     | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| vermeer   | Redmi K70 / POCO F6 Pro           | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| manet     | Redmi K70 Pro                     | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| onyx      | Redmi Turbo 4 Pro / POCO F7       | Snapdragon 8s Gen 4   | N/A | N/A | ABL Cmdline Injection | 已測試 | 黑屏無畫面 |
-| zorn      | Redmi K80 / POCO F7 Pro           | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| miro      | Redmi K80 Pro / POCO F7 Ultra     | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| annibale  | Redmi K90 / POCO F8 Pro           | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | 未測試 | |
-| myron     | Redmi K90 Pro Max / POCO F8 Ultra | Snapdragon 8 Elite Gen 5 | N/A | N/A | ABL Cmdline Injection | 未測試 | |
+| cupid     | Xiaomi 12         | Snapdragon 8 Gen 1    | Android 15 | 2025-11-01 | CVE-2025-21479 | Tested - Not reproduced | |
+| zeus      | Xiaomi 12 Pro     | Snapdragon 8 Gen 1    | N/A | N/A | CVE-2025-21479 | Unverified | |
+| mayfly    | Xiaomi 12S        | Snapdragon 8+ Gen 1   | N/A | N/A | CVE-2025-21479 | Unverified | |
+| unicorn   | Xiaomi 12S Pro    | Snapdragon 8+ Gen 1   | N/A | N/A | CVE-2025-21479 | Unverified | |
+| thor      | Xiaomi 12S Ultra  | Snapdragon 8+ Gen 1   | N/A | N/A | CVE-2025-21479 | Unverified | |
+| fuxi      | Xiaomi 13         | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| nuwa      | Xiaomi 13 Pro     | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| ishtar    | Xiaomi 13 Ultra   | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| houji     | Xiaomi 14         | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | Verified / Tested | |
+| shennong  | Xiaomi 14 Pro     | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| aurora    | Xiaomi 14 Ultra   | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| dada      | Xiaomi 15         | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| haotian   | Xiaomi 15 Pro     | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| xuanyuan  | Xiaomi 15 Ultra   | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| pudding   | Xiaomi 17         | Snapdragon 8 Elite Gen 5  | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| pandora   | Xiaomi 17 Pro     | Snapdragon 8 Elite Gen 5  | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| popsicle  | Xiaomi 17 Pro Max | Snapdragon 8 Elite Gen 5  | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| nezha     | Xiaomi 17 Ultra   | Snapdragon 8 Elite Gen 5  | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| liuqin    | Xiaomi Pad 6 Pro              | Snapdragon 8+ Gen 1   | N/A | N/A | CVE-2025-21479 | Unverified | |
+| yudi      | Xiaomi Pad 6 Max 14           | Snapdragon 8+ Gen 1   | N/A | N/A | CVE-2025-21479 | Unverified | |
+| sheng     | Xiaomi Pad 6S Pro 12.4        | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| uke       | Xiaomi Pad 7 / POCO Pad X1    | Snapdragon 7+ Gen 3   | N/A | N/A | CVE-2025-21479 | Unverified | |
+| muyu      | Xiaomi Pad 7 Pro              | Snapdragon 8s Gen 3   | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| yupei     | Xiaomi Pad 8                  | Snapdragon 8s Gen 4   | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| piano     | Xiaomi Pad 8 Pro              | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| ruyi      | Xiaomi MIX Flip               | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| bixi      | Xiaomi MIX Flip 2             | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| babylon   | Xiaomi MIX Fold 3             | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| goku      | Xiaomi MIX Fold 4             | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| marble    | Redmi Note 12 Turbo / POCO F5     | Snapdragon 7+ Gen 2   | Android 15 | 2026-05-01 | CVE-2025-21479 | Verified / Tested | |
+| sapphiren | Redmi Note 13 NFC                 | Snapdragon 685        | Android 15 | 2026-01-01 | ABL Cmdline Injection | Verified / Tested | |
+| creek     | Redmi 15 / POCO M7                | Snapdragon 685        | Android 15 | 2026-01-01 | ABL Cmdline Injection | Verified / Tested | |
+| spring    | Redmi 15R 5G/Redmi 15 5G/M7 Plus/M8s 5G/POCO M7 Plus 5G | Snapdragon 6s Gen 3 | Android 15 | 2025-09-01 | ABL Cmdline Injection | Verified / Tested | 黑屏無畫面 |
+| kunzite   | Redmi Note 15 5G                  | Snapdragon 6 Gen 3    | Android 15 | 2026-02-01 | ABL Cmdline Injection | Verified / Tested | 黑屏無畫面 |
+| ingres    | Redmi K50 Gaming / POCO F4 GT     | Snapdragon 8 Gen 1    | Android 14 | 2025-04-01 | CVE-2025-21479 | Tested - Not reproduced | |
+| diting    | Redmi K50 Ultra / Xiaomi 12T Pro  | Snapdragon 8+ Gen 1   | Android 15 | 2025-05-01 | CVE-2025-21479 | Verified / Tested | |
+| mondrian  | Redmi K60 / POCO F5 Pro           | Snapdragon 8+ Gen 1   | Android 15 | 2026-02-01 | CVE-2025-21479 | Verified / Tested | |
+| socrates  | Redmi K60 Pro                     | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| vermeer   | Redmi K70 / POCO F6 Pro           | Snapdragon 8 Gen 2    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| manet     | Redmi K70 Pro                     | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| onyx      | Redmi Turbo 4 Pro / POCO F7       | Snapdragon 8s Gen 4   | N/A | N/A | ABL Cmdline Injection | Verified / Tested | 黑屏無畫面 |
+| zorn      | Redmi K80 / POCO F7 Pro           | Snapdragon 8 Gen 3    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| miro      | Redmi K80 Pro / POCO F7 Ultra     | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| annibale  | Redmi K90 / POCO F8 Pro           | Snapdragon 8 Elite    | N/A | N/A | ABL Cmdline Injection | Unverified | |
+| myron     | Redmi K90 Pro Max / POCO F8 Ultra | Snapdragon 8 Elite Gen 5 | N/A | N/A | ABL Cmdline Injection | Unverified | |
 
-### 3.2 fenrir 支援與已知受影響裝置
+### 3.2 fenrir 封存上游支援摘要
 
 參考來源：
 
-- 支援清單：<https://github.com/R0rt1z2/fenrir#status>
-- 官方 Release：<https://github.com/R0rt1z2/fenrir/releases>
+- 專案與完整支援清單：<https://github.com/R0rt1z2/fenrir#status>
+- 官方 Releases：<https://github.com/R0rt1z2/fenrir/releases>
 
-> 註：
-> - 「上游列為支援」表示裝置已出現在 `fenrir` README 的支援清單，不代表所有區域版本、OTA 或韌體建置皆已完成獨立實機驗證。
-> - 「有官方 Release」表示 Releases 頁面可見對應的預先建置資產；使用時仍須精準匹配裝置與韌體版本。
-> - Vivo X80 Pro 僅被上游作者列為已知受影響，未列入目前正式支援清單。
+> 證據狀態：`Upstream documented`。本節為截至 2026-10-25 的整理快照，僅摘要上游封存前公開資訊，未由本專案逐機獨立實測。
 
-| codename | 裝置 | 上游狀態 | 備註 |
-| --- | --- | --- | --- |
-| `Pacman` | Nothing Phone (2a) | 上游列為支援 | 有 NothingOS 3 / 4 官方 Release |
-| `PacmanPro` | Nothing Phone (2a) Plus | 上游列為支援 | 有 NothingOS 4 官方 Release；穩定版 Preloader 已修補，公開 Release 具有裝置與韌體特定前置條件 |
-| `Tetris` | CMF Phone 1 | 上游列為支援 | 未見官方 Release |
-| `peridotl` | Lenovo IdeaTab Pro / Xiaoxin Pad Pro 12.7 | 上游列為支援 | 未見官方 Release |
-| `LG7n` | Tecno Pova 4 | 上游列為支援 | 未見官方 Release |
-| `LG8n` | Tecno Pova 4 Pro | 上游列為支援 | 未見官方 Release |
-| `LH7n` | Tecno Pova 5 | 上游列為支援 | 未見官方 Release |
-| `Q25` | Zinwa Q25 | 上游列為支援 | 未見官方 Release |
-| `duchamp` | Redmi K70E / POCO X6 Pro 5G | 上游列為支援 | 未見官方 Release |
-| `rodin` | Redmi Turbo 4 / POCO X7 Pro | 上游列為支援 | 未見官方 Release |
-| `dash` | Redmi Turbo 5 Max / POCO X8 Pro Max | 上游列為支援 | 未見官方 Release |
-| `xaga` | Redmi Note 11T Pro / Pro+ / POCO X4 GT / Redmi K50i | 上游列為支援 | 未見官方 Release |
-| `plato` | Xiaomi 12T | 上游列為支援 | 未見官方 Release |
-| N/A | Vivo X80 Pro | 已知受影響，未列入正式支援 | 上游作者曾確認其 `bl2_ext` 未被驗證；未見正式 port / Release |
+`fenrir` 已於 2026-09-20 由上游作者封存並標示 deprecated。封存前的支援範圍跨及 Nothing / CMF、Lenovo、Tecno、Zinwa，以及部分 Xiaomi / Redmi / POCO MediaTek 裝置；公開 Releases 則主要可見 Nothing Phone (2a) 與 Nothing Phone (2a) Plus 的特定 NothingOS 建置。
+
+上游另曾將 Vivo X80 Pro 描述為已知受影響裝置，但未提供正式 port / Release。所有可用性仍須依 codename、Preloader、`bl2_ext`、OTA 與區域韌體精確比對；完整且最新的裝置清單應直接查閱上游 README 與 Releases。
 
 ### 3.3 kaeru Fake Lock 原始碼支援清單
 
@@ -1121,6 +1152,8 @@ flowchart TD
 - 專案：<https://github.com/R0rt1z2/kaeru>
 - Board 原始碼：<https://github.com/R0rt1z2/kaeru/tree/main/board>
 - 本次核對快照：<https://github.com/R0rt1z2/kaeru/commit/88234209a2cb2ec2b1475bbc77fbef3bfc754cbd>
+
+> 證據狀態：`Reverse-engineered`（公開原始碼核對）。此表固定於上列 commit，不代表本專案已逐機實測；`kaeru` 上游原始碼與文件採 AGPL-3.0，本節未納入其 implementation。
 
 以下只收錄在該快照中同時具備可建置目標、lock-state hook，且實際註冊 `fastboot oem bldr_spoof` 或提供等效 board-local 實作的機型。僅出現在舊 Release、僅有設定旗標，或只是移除解鎖警告的目標不列入。
 
@@ -1153,74 +1186,37 @@ flowchart TD
 > - Meizu MX6 的 board patch 強制回報 **unlocked** 以開放操作，不是 fake lock，因此未列入。
 > - 上述是原始碼層級的支援判定，不代表每個 target 都有官方預建映像或已經本報告獨立實機驗證。修改後 LK 仍須透過已解鎖寫入路徑、cert bypass、Preloader / BootROM 漏洞或其他裝置特定方式部署。
 
-### 3.4 oppo-mtk-fastboot-unlock 上游測試清單
+### 3.4 oppo-mtk-fastboot-unlock 上游支援摘要
 
 參考來源：
 
 - 專案：<https://github.com/Shocked-Cat/oppo-mtk-fastboot-unlock>
-- 上游測試清單：<https://github.com/Shocked-Cat/oppo-mtk-fastboot-unlock/blob/main/support_list.md>
+- 完整上游支援清單：<https://github.com/Shocked-Cat/oppo-mtk-fastboot-unlock/blob/main/support_list.md>
 
-> 註：
-> - 上游主 README 將主要適用範圍標為 Android 11 至 Android 14，並指出 Android 10 與 Android 15 以上通常不支援此 patch；實際例外與降級需求仍以各列狀態為準。
-> - `MTKClient`、`GeekFlashTool` 或 OPlus 售後工具可讀寫，不等於 Preloader patch 已成功開啟 fastboot。
-> - 上游清單目前只列出 OPPO 與 Realme 機型，尚未列出已驗證的 OnePlus 機型。
+> 證據狀態：`Upstream documented`。本節為截至 2026-10-25 的整理快照，由本 repository 作者依上游資料撰寫簡短事實摘要；沒有轉載完整 device / chipset table，也沒有將上游結果標示為本專案的 `Verified / Tested`。
 
-| 裝置 | Device code | SoC | 上游狀態摘要 |
-| --- | --- | --- | --- |
-| OPPO A3 (2018) | `PADM00` | Helio P60 (`MT6771`) | MTKClient 可用；Android 10 不支援 patch，可能需回退 Android 8/9 |
-| OPPO A31 (2020) | `CPH2015` / `CPH2029` / `CPH2031` | Helio G35 (`MT6765`) | MTKClient 可用；目前 LK 不支援此 patch |
-| OPPO A9X | `PCEM00` / `PCET00` | Helio P70 (`MT6771`) | 完整支援（MTKClient） |
-| OPPO A15 | `CPH2185` | Helio P35 (`MT6765`) | MTKClient 可用；Android 10 實測未開啟 fastboot |
-| OPPO A16 | `CPH2269` | Helio P35 (`MT6765`) | 完整支援（MTKClient + DA） |
-| OPPO A16k | `CPH2349` / `CPH2351` | Helio G35 (`MT6765`) | 完整支援（MTKClient + DA + AUTH） |
-| OPPO A17 | `CPH2477` | Helio G35 (`MT6765`) | 完整支援（MTKClient） |
-| OPPO A17K | `CPH2471` | Helio G35 (`MT6765`) | 完整支援（MTKClient） |
-| OPPO A18 | `CPH2591` | Helio G85 (`MT6768/MT6769`) | MTKClient 存在 DAA 問題；`auth_sv5.auth` 已測 |
-| OPPO A35 | `PEFM00` | Helio P35 (`MT6765`) | MTKClient 可用；patch 未開啟 fastboot |
-| OPPO A54 4G | `CPH2239` | Helio G35 (`MT6765`) | MTKClient 存在 DAA 問題；AUTH 未測 |
-| OPPO A55 4G | `CPH2325` | Helio G35 (`MT6765`) | 完整支援（MTKClient） |
-| OPPO A55 5G | `PEMM00` / `PEMT00` | Dimensity 700 (`MT6833`) | 完整支援（GeekFlashTool） |
-| OPPO A56 5G | `PFVM110` | Dimensity 700 (`MT6833`) | 完整支援（MTKClient） |
-| OPPO A58 4G | `CPH2577` | Helio G85 (`MT6768/MT6769`) | MTKClient 存在 DAA 問題；AUTH 未測 |
-| OPPO A58x | `PHJ110` | Dimensity 700 (`MT6833`) | GeekFlashTool 僅列 Android 12；OPlus 售後工具列為完整支援 |
-| OPPO A73 5G | `CPH2161` | Dimensity 720 (`MT6853`) | MTKClient GUI 可用；CLI 需要 `auth_sv5.auth` |
-| OPPO A91 | `PFGM00` / `CPH2001` / `CPH2021` | Helio P70 (`MT6771`) | 需更新至 Android 11 |
-| OPPO A93s | `PFGM00` | Dimensity 700 (`MT6833`) | 完整支援（MTKClient） |
-| OPPO F31 Pro 5G | `CPH2763` | Dimensity 7300 (`MT6878`) | OPlus 售後工具可用；Android 15 以上 patch 未成功 |
-| OPPO Find X5 Pro | `PFFM20` | Dimensity 9000 (`MT6983`) | 需回退 Android 14（GeekFlashTool） |
-| OPPO Find X8s | `PKT110` | Dimensity 9400+ (`MT6991`) | OPlus 售後工具可用；Android 15 未能解鎖 fastboot |
-| OPPO K9 Pro | `PEYM00` | Dimensity 1200 (`MT6893`) | 完整支援（GeekFlashTool） |
-| OPPO Pad 2 | `OPD2201` | Dimensity 9000 (`MT6983`) | 完整支援（GeekFlashTool） |
-| OPPO Reno 10 5G | `CPH2531` | Dimensity 7050 (`MT6877V`) | MTKClient 存在 DAA 問題；AUTH 未測 |
-| OPPO Reno 11 5G | `CPH2599` | Dimensity 7050 (`MT6877V`) | PLPort 有 DAA 問題，BROM 有 DA ARB 問題；patch 未測 |
-| OPPO Reno 11F 5G | `CPH2603` | Dimensity 7050 (`MT6877V`) | MTKClient 存在 DAA 問題；AUTH 未測 |
-| OPPO Reno 3 5G | `CPH2125` | Dimensity 1000L (`MT6885`) | 完整支援（MTKClient） |
-| OPPO Reno 4 Lite | `CPH2125` | Helio P95 (`MT6779`) | 完整支援（MTKClient） |
-| OPPO Reno 5 Lite | `CPH2205` | Helio P95 (`MT6779`) | 完整支援（MTKClient） |
-| OPPO Reno 5 Z | `CPH2211` | Helio P90 (`MT6779`) | 完整支援（MTKClient + DA）；較新版本可能需要 test point |
-| OPPO Reno 6 5G | `CPH2251` / `PEQM00` | Dimensity 900 (`MT6877`) | 完整支援（GeekFlashTool）；上游推測 MTKClient 亦可用 |
-| OPPO Reno 6 Pro 5G | `CPH2249` / `PEPM00` | Dimensity 1200 (`MT6893`) | 需回退 Android 11；patch 完整支援 |
-| OPPO Reno 8 5G | `CPH2359` / `PGBM10` | Dimensity 1300 (`MT6893`) | 需回退 Android 12；patch 完整支援 |
-| OPPO Reno Z | `CPH1979` | Dimensity 900 (`MT6877`) | 上游列為 Android 11 完整支援（GeekFlashTool） |
-| Realme 1 | `CPH1859` / `CPH1861` | Helio P60 (`MT6771`) | MTKClient 可用；可能需回退 Android 8/9 |
-| Realme 12 Plus | `RMX3867` | Dimensity 7050 (`MT6877`) | MTKClient + DA 可用；Android 15 以上未開啟 fastboot，Android 14 未測 |
-| Realme C11 / C12 / C15 | `RMX2185` / `RMX2189` / `RMX2180` | Helio G35 (`MT6765`) | 更新至 Android 11 後完整支援（MTKClient） |
-| Realme 6 | `RMX2001` | Helio G90T (`MT6785`) | 完整支援（MTKClient） |
-| Realme 7 | `RMX2151` / `RMX2155` | Helio G95 (`MT6785`) | 完整支援（MTKClient） |
-| Realme 7 5G | `RMX2111` | Dimensity 800U (`MT6853`) | MTKClient 可用；patch 尚未實測 |
-| Realme GT Neo | `RMX3031` | Dimensity 1200 (`MT6893`) | 完整支援（GeekFlashTool） |
-| Realme GT Neo 2T | `RMX3357` / `RE5469` | Dimensity 1200 (`MT6893`) | 完整支援（GeekFlashTool） |
-| Realme Q2 Pro | `RMX2173` | Dimensity 800U (`MT6853`) | 完整支援（MTKClient + DA） |
-| Realme V11 5G | `RMX3121` / `RMX3122` | Dimensity 700 (`MT6833`) | 完整支援（GeekFlashTool） |
-| Realme V15 5G | `RMX3092` / `RMX3093` | Dimensity 800U (`MT6853`) | 完整支援（GeekFlashTool） |
-| Realme X7 Max | `RMX3031` | Dimensity 1200 (`MT6893`) | 需回退 Android 11；patch 完整支援 |
+此專案研究 OPlus MediaTek 裝置的 factory Preloader / LK patch 流程，用於恢復或開啟 fastboot 與標準 Bootloader 解鎖路徑。上游清單主要涵蓋 OPPO 與 Realme，最後核對時未列出已驗證的 OnePlus 機型。
+
+上游說明顯示，適用性高度依賴裝置、Android / LK 版本及可用的 DA / AUTH / 維修工具；主要討論範圍集中在 Android 11 至 Android 14，部分 Android 10 或 Android 15 以上建置無法套用 patch，另有機型需要降級、test point 或特定售後授權工具。能透過 MTKClient、GeekFlashTool 或 OPlus 工具讀寫裝置，也不等於 Preloader patch 已成功開啟 fastboot。
+
+逐機型、device code、SoC 與測試狀態請直接查閱上游 `support_list.md`，本 repository 不複製或維護該完整清單。
 
 ### 3.5 Snapdragon 8 Elite Gen 5 / Snapdragon 8 Gen 5 GBL 候選裝置
 
 以下裝置使用 `gbl_root_canoe` 指定的 Snapdragon 8 Elite Gen 5 / Snapdragon 8 Gen 5 平台，並曾被公開專案或相關資料提及，但尚未由本報告逐一獨立驗證（來源見 1.3）。SoC 符合只代表通過第一層篩選，仍須確認 ABL 是否保留 GBL 漏洞、是否啟用 Baseband Guard，以及具體韌體與修補狀態：
+
+> 證據狀態：`Potentially affected` / `Unverified`。
 
 - Xiaomi 17 series
 - Redmi K90 Pro Max
 - OnePlus 15 / Ace 6T
 - RedMagic 11 series
 - Nubia Z80 Ultra
+
+## License / 授權
+
+本 repository 中由專案作者持有權利的原創內容，依 [GNU General Public License Version 3](LICENSE) 授權。
+
+SPDX-License-Identifier: `GPL-3.0-only`
+
+第三方商標、短引用、外部研究資料，以及被連結的 PoC、repositories 與 documents，仍受各自權利人及原始授權約束，不因本 repository 採用 `GPL-3.0-only` 而被重新授權。
