@@ -10,7 +10,7 @@
 >
 > AI 協作整理模型：GPT-5.6 sol with daybreak；技術結論仍以原始來源與維護者核對結果為準。
 >
-> 最後整理時間：2026-10-25（Asia/Taipei）
+> 最後整理時間：2026-10-28（Asia/Taipei）
 
 ## Project scope / 專案範圍
 
@@ -430,6 +430,64 @@ DirtyFrag 是 Linux kernel XFRM / IPsec ESP 路徑中的 page-cache write 漏洞
 - Xiaomi 15 (`dada`) 適配：<https://github.com/quyicheng03-boop/xiaomi15-dada-cve-2026-64560>
 - Redmi K90 (`annibale`) 適配：<https://github.com/morannlx/RedmiK90-dada-cve-2026-64560>
 - NVD：<https://nvd.nist.gov/vuln/detail/CVE-2026-64560>
+
+### 1.12 漏洞 12：CVE-2026-98260（POSIX CPU Timer / exec UAF）
+
+`CVE-2026-98260` 是 Linux kernel 在非 leader thread 執行 `exec()` 時，POSIX CPU timer 清理順序不完整所造成的 Use-After-Free。問題由 Linux v5.7 的 commit `55e8c8eb2c7b` 引入：執行緒識別資訊在 `de_thread()` 後發生轉移，而後續 `begin_new_exec()` 流程若在 timer cleanup 前失敗，可能讓已釋放的 timer node 仍留在存活 task 的 timer queue，並在稍後清理時造成 kernel memory corruption。
+
+上游修補 commit `acb03d388181` 將 POSIX timer cleanup 提前至 `de_thread()` 之後、其他可能失敗的步驟之前。從 v5.7 引入到 2026 年主線修補，這條有問題的程式路徑約存在六年半。此漏洞已由單純觸發研究快速發展為 Linux 完整 LPE、Android 實機 root 與 KernelSU late-load 專案，因此適合列為 Android temporary root 的高優先追蹤項目。
+
+#### 1.12.1 影響版本與修補邊界
+
+以下為截至 2026-10-28 可由上游修補與公開分析交叉確認的分支邊界。OEM 可能自行回補等效修正，因此實際判斷仍應以 exact kernel source、boot image、commit 或廠商公告為準。
+
+| Kernel 分支 | 公開整理的受影響範圍 | 已知上游修補邊界 |
+| --- | --- | --- |
+| 5.7 ～ 6.1（含 5.10 / 5.15 / 6.1 LTS） | 引入 commit 之後可能受影響 | 公開分析截至 2026-10-26 未在上述 LTS 找到對應 stable 回填；EOL 分支與 OEM kernel 均須直接檢查 patch |
+| 6.2 ～ 6.6 | 至 `6.6.157` | `6.6.158` |
+| 6.7 ～ 6.12 | 至 `6.12.111` | `6.12.112` |
+| 6.13 ～ 6.18 | 至 `6.18.53` | `6.18.54` |
+| 7.0 ～ 7.2 | 至 `7.2.7` | `7.2.8` |
+| mainline | `< 7.3` | `7.3` |
+
+> 注意：版本落在上述區間，只能證明可能包含受影響程式路徑，不等於該裝置已有穩定 root exploit。Android 實際可利用性仍受 OEM backport、allocator / slab 行為、KASLR、CFI、SELinux、kernel config 與 exact-build offset 影響。
+
+#### 1.12.2 Android 公開利用狀態
+
+| 裝置 / 專案 | 公開狀態 | 證據邊界 |
+| --- | --- | --- |
+| Galaxy S26 Ultra（`S948NKSS4BZIG`） | `InfinityCore` 作者表示已從 `untrusted_app` 取得完整 root | Android exploit 尚未公開；目前屬研究者原始報告，不是可下載的公開實作 |
+| Xiaomi Pad 9 Pro Max (`yingtian`) | `o3root` 公開完整 source、APK 與 KernelSU LKM chain，專案標示指定 HyperOS 4 build 已實機測試 | `Upstream documented`；本報告未獨立重現，且 payload 綁定 exact kernel / firmware |
+| Xiaomi 18 Fold (`lhasa`) | `o3root` 指出其 boot kernel 與 `yingtian` 目標完全相同 | 專案明確標示尚未實機測試，應列為 `Potentially affected` 而非已驗證 |
+| 其他 Xiaomi、OnePlus、vivo、XRING 與 Android 17 移植 | GitHub 已出現多個裝置特定 port、分析與半成品工具 | 數量增加代表漏洞正被積極移植，不代表每個 repository 都有獨立實機 root 證據 |
+
+`villager1314/CVE-2026-98260-Analysis` 提供 Linux / Android NDK 競態觸發器、修補整理與分支分析，但專案明確說明其 PoC 不包含 heap spray、物件占位或權限提升原語，且尚未在真實 KASAN kernel 完成回歸驗證。因此它應歸類為「公開 trigger / patch-state validation」，不能單獨當成 Android root exploit 證據。
+
+相較之下，`o3root` 已公開從 shell / Shizuku 執行環境進入 `uid=0`、載入 KernelSU-family LKM 並提供 current-boot root 的完整專案。這使 `CVE-2026-98260` 的公開狀態可由「Android 可能受影響」上修為「已有公開 Android 完整利用鏈與 exact-build 實機適配」。其結果仍是 temporary root；重新開機後失效，也不等於 Bootloader 已解鎖、AVB 已繞過或已取得持久化 root。
+
+#### 1.12.3 公開狀態
+
+| 項目 | 狀態 |
+| --- | --- |
+| 漏洞類型 | Linux Kernel POSIX CPU Timer UAF / Local Privilege Escalation |
+| Linux 完整 LPE | 已公開 |
+| Android trigger / reproducer | 已公開 |
+| Android 完整利用鏈 | 已公開，已有 Xiaomi exact-build 工具鏈；另有研究者回報 Galaxy S26 Ultra 成功案例 |
+| 是否通用 | 否，仍需逐裝置、逐韌體、逐 kernel 適配 |
+| 是否直接解鎖 Bootloader | 否 |
+| 報告定位 | Kernel LPE / Temporary Root / 積極武器化中的 Android N-day |
+
+參考資料：
+
+- 原始研究與 Android 實機聲明：<https://github.com/V4bel/InfinityCore>
+- Linux / Android 觸發器與版本分析：<https://github.com/villager1314/CVE-2026-98260-Analysis>
+- Xiaomi Android 完整利用鏈：<https://github.com/zsw125/o3root>
+- Linux mainline 修補：<https://git.kernel.org/stable/c/acb03d3881818581052924a9bbbe92b8741ed448>
+- Linux 6.6 stable 修補：<https://git.kernel.org/stable/c/6f1977cea3e85cd8ab55fb337d3e1725fe61d1ce>
+- Linux 6.12 stable 修補：<https://git.kernel.org/stable/c/d9ae467e617ca29b825493a362bf0d75ad5f4ac3>
+- Linux 6.18 stable 修補：<https://git.kernel.org/stable/c/75aa08b93c65766040f9ca99f41ac85ad22596b6>
+- Linux 7.2 stable 修補：<https://git.kernel.org/stable/c/d602877baf36c43c788a5f472c977e0be414029f>
+- GitHub repository 搜尋（僅作為後續 port 發現入口，不代表獨立驗證）：<https://github.com/search?q=CVE-2026-98260&type=repositories>
 
 ## 2. 可能被利用的後續攻擊手法
 

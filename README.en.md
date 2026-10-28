@@ -10,7 +10,7 @@ This project is intended for security research, risk tracking, patch comparison,
 >
 > AI-assisted organization: GPT-5.6 sol with daybreak. Technical conclusions remain subject to source and maintainer review.
 >
-> Last reviewed: 2026-10-25 (Asia/Taipei)
+> Last reviewed: 2026-10-28 (Asia/Taipei)
 
 The [Traditional Chinese README](README.md) is the canonical detailed report. This English edition provides the project scope, evidence model, research index, and links to the maintained device matrices without duplicating every fast-changing row.
 
@@ -76,6 +76,7 @@ This table is an index. See the matching section in the [canonical report](READM
 | 1.9 | CVE-2026-21385 | Qualcomm Display / Graphics memory corruption | Android and Qualcomm bulletins document the issue; no complete public Android root PoC is confirmed here | `Upstream documented` |
 | 1.10 | CVE-2026-43284, DirtyFrag | Linux XFRM / ESP page-cache write | Public Android-oriented chains and KMI-specific tooling exist | `Upstream documented`; support remains KMI and firmware specific |
 | 1.11 | CVE-2026-64560 | POSIX CPU timer non-leader exec use-after-free | Public Xiaomi-oriented ports show active N-day adaptation | `Upstream documented`; confirmed in-the-wild use is not established here |
+| 1.12 | CVE-2026-98260 | POSIX CPU timer cleanup use-after-free after non-leader `exec()` | Public Linux LPE and Android exact-build root / KernelSU chains now exist | `Upstream documented`; public Android exploitation is profile and firmware specific |
 
 ### 1.1 CVE-2025-21479 references
 
@@ -113,7 +114,7 @@ The canonical report contains an independently written factual snapshot dated 20
 
 `fenrir` was archived by its owner on 2026-09-20 and is marked deprecated. Its support information is retained as a historical snapshot. The `kaeru` fake-lock matrix is based on source review at a pinned commit and is not treated as device testing.
 
-### 1.6-1.11 kernel and graphics references
+### 1.6-1.12 kernel and graphics references
 
 - [Dirty Pipe technical write-up](https://dirtypipe.cm4all.com/)
 - [DirtyPipe-Android](https://github.com/polygraphene/DirtyPipe-Android)
@@ -125,6 +126,12 @@ The canonical report contains an independently written factual snapshot dated 20
 - [DFRoot](https://github.com/diabl0w/DFRoot)
 - [GhostSam](https://github.com/snothin/GhostSam)
 - [CVE-2026-64560 analysis](https://nebusec.ai/buglist/CVE-2026-64560/)
+- [InfinityCore original CVE-2026-98260 research](https://github.com/V4bel/InfinityCore)
+- [CVE-2026-98260 trigger and branch analysis](https://github.com/villager1314/CVE-2026-98260-Analysis)
+- [o3root Android exact-build exploit chain](https://github.com/zsw125/o3root)
+- [CVE-2026-98260 mainline fix](https://git.kernel.org/stable/c/acb03d3881818581052924a9bbbe92b8741ed448)
+
+For CVE-2026-98260, a vulnerable version range indicates that the affected code path may be present; it does not prove that a generic Android exploit works on every GKI device. OEM backports, allocator behavior, mitigations, and exact-build offsets remain decisive. The public `o3root` project documents a complete Xiaomi-specific current-boot root and KernelSU chain, while the original researcher reports a Galaxy S26 Ultra `untrusted_app`-to-root result whose Android exploit source has not yet been released.
 
 ## 2. Potential follow-on attack techniques
 
